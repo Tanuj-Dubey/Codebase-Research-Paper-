@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>High-Fidelity Architecture Diagram</title>
+    <!-- Load Mermaid.js for perfect algorithmic alignment -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                fontFamily: 'arial, sans-serif',
+                fontSize: '14px'
+            },
+            flowchart: {
+                curve: 'monotoneX', /* Smooth routing curves */
+                nodeSpacing: 40,
+                rankSpacing: 70,
+                padding: 15
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            margin: 0;
+        }
+        h1 {
+            font-size: 32px;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 800;
+        }
+        .mermaid-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 1500px;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }
+        .instructions {
+            margin-top: 30px;
+            font-size: 15px;
+            color: #2c3e50;
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #3498db;
+            max-width: 800px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Expert System: Hybrid GenAI-Residual Model<br>with Confidence Gating for Battery RUL</h1>
+
+    <div class="mermaid-container">
+        <div class="mermaid">
+            graph LR
+                %% Define Column Subgraphs
+                subgraph DataPool ["MULTI-CASE DATA POOL"]
+                    direction TB
+                    D1["<b>NASA B0005 Dataset</b><br/>Last 3000 Rows<br/>Seq Len: 96"]
+                    C1["<b>Case 1:</b><br/>Chronos Only (Baseline)"]
+                    C2["<b>Case 2:</b><br/>Partial Hybrid"]
+                    C3["<b>Case 3:</b><br/>Full Hybrid Ensemble"]
+                end
+
+                subgraph Chronos ["CHRONOS FOUNDATION LAYER"]
+                    direction TB
+                    Ctx["<b>Multi-Context Inference</b><br/>Lengths: 96, 48"]
+                    Samp["<b>Zero-Shot Inference</b><br/>12 Stochastic Samples"]
+                    Agg["<b>Uncertainty Aggregator</b><br/>Inverse-Variance Blend"]
+                end
+
+                subgraph Refinement ["REFINEMENT ENSEMBLE MODULE"]
+                    direction TB
+                    Patch["<b>PatchTST</b><br/>Transformer Refinement<br/>(Patch: 16, Stride: 8)"]
+                    TTM["<b>TinyTimeMixer</b><br/>MLP Projection<br/>(Dense Mapping)"]
+                    Params["<b>Optimized Hyperparameters</b><br/>• Batch Size: 128<br/>• Learn Rate: 0.01<br/>• Epochs: 50<br/>• Dropout: 0.10<br/>• Loss: 0.7 L1 + 0.3 MSE"]
+                end
+
+                subgraph Gating ["CONFIDENCE-AWARE GATING"]
+                    direction TB
+                    Blend["<b>Stability Gating</b><br/>60/40 Dynamic Blend"]
+                    EMA["<b>EMA Low-Pass Filter</b><br/>Smoothing (β = 0.7)"]
+                end
+
+                subgraph Calibration ["CALIBRATION & SAFETY GUARD"]
+                    direction TB
+                    Calib["<b>Meta-Calibration</b><br/>Ridge Affine Mapping<br/>y = a*p + b"]
+                    Guard["<b>Outlier Guard</b><br/>Adaptive Clipping<br/>(μ ± 3σ)"]
+                    Out(("<b>Standardized RUL Output</b><br/>72.11% Error Reduction"))
+                end
+
+                %% Data Flow Routing (Thick arrows for main flow)
+                D1 ==> Ctx
+                C1 --> Ctx
+                C2 --> Ctx
+                C3 --> Ctx
+                
+                Ctx ==> Samp
+                Samp ==> Agg
+                
+                Agg ==> Patch
+                Agg ==> TTM
+                
+                Patch ==> Blend
+                TTM ==> Blend
+                
+                %% Parameter connections (Dotted arrows)
+                Params -.-> Patch
+                Params -.-> TTM
+                
+                Blend ==> EMA
+                EMA ==> Calib
+                Calib ==> Guard
+                Guard ==> Out
+
+                %% Styling to exactly match the portfolio image colors
+                classDef default fill:#ffffff,stroke:#cccccc,stroke-width:2px,color:#333333;
+                
+                classDef datapool fill:#e8eff5,stroke:#1b365d,stroke-width:2px,color:#000;
+                classDef chronos fill:#fdf2e9,stroke:#d35400,stroke-width:2px,color:#000;
+                classDef refine fill:#e8f8f5,stroke:#0e6251,stroke-width:2px,color:#000;
+                classDef gate fill:#e9f7ef,stroke:#1d8348,stroke-width:2px,color:#000;
+                classDef calib fill:#f1f8e9,stroke:#558b2f,stroke-width:2px,color:#000;
+                
+                classDef highlight fill:#fffde7,stroke:#f39c12,stroke-width:2px,color:#000;
+                classDef output fill:#1b365d,stroke:#2980b9,stroke-width:4px,color:#ffffff;
+
+                class D1,C1,C2,C3 datapool;
+                class Ctx,Samp,Agg chronos;
+                class Patch,TTM refine;
+                class Blend,EMA gate;
+                class Calib,Guard calib;
+                class Params highlight;
+                class Out output;
+                
+                %% Solid Subgraph borders mapping the 5 columns
+                style DataPool fill:none,stroke:#1b365d,stroke-width:3px;
+                style Chronos fill:none,stroke:#d35400,stroke-width:3px;
+                style Refinement fill:none,stroke:#0e6251,stroke-width:3px;
+                style Gating fill:none,stroke:#1d8348,stroke-width:3px;
+                style Calibration fill:none,stroke:#558b2f,stroke-width:3px;
+
+        </div>
+    </div>
+
+    <div class="instructions">
+        <b>HOW TO SAVE FOR PUBLICATION:</b><br/>
+        This diagram is rendered using algorithmic math, guaranteeing perfect alignment. <br/><br/>
+        1. <b>For PNG:</b> Right-click anywhere on the diagram above and select <b>"Save image as..."</b> or <b>"Copy Image"</b>.<br/>
+        2. <b>For PDF:</b> Press <b>Ctrl + P</b>, select "Save as PDF", and ensure "Background graphics" is checked. This gives you an infinite-resolution vector file for IEEE submission.
+    </div>
+
+</body>
+</html>

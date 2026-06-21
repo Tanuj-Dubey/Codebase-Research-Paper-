@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+ENV/
+.env
+*.egg-info/
+dist/
+build/
+
+# PyTorch / local checkpoints
+*.pth
+*.pt
+*.ckpt
+
+# Chronos / inference caches (regenerate locally)
+**/HIS/chronos_*.npy
+
+# IDE / OS
+.cursor/
+.vscode/
+.idea/
+Thumbs.db
+.Desktop.ini
+
+# Redundant archives (folders code+data/ and papers/ are tracked)
+*.zip
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs / temp
+*.log
+temp_metrics.txt

@@ -1,0 +1,12 @@
+1. ***Repository for another method to prediction***
+https://github.com/utsavk28/long-live-the-battery/blob/main/notebooks/rnn-approaches.ipynb
+
+2. Repository to help with datasets
+https://github.com/bnarms/NASA-Battery-Dataset/blob/main/NASA_Battery_Data_Extraction.ipynb
+
+3. Dataset description- by NASA
+https://data.nasa.gov/dataset/Li-ion-Battery-Aging-Datasets/uj5r-zjdb
+
+4. *** Ongoing research paper- editable link***
+https://www.overleaf.com/3874531372ssnwmrsgdmnn
+

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hybrid GenAI-Residual Model Architecture</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #ffffff; padding: 40px; }
+  .header { text-align: center; font-size: 36px; font-weight: bold; margin-bottom: 50px; color: #000; letter-spacing: -0.5px; }
+  .diagram { display: flex; align-items: stretch; gap: 10px; height: 600px; max-width: 1400px; margin: 0 auto; }
+  
+  .col { flex: 1; border: 2px solid; border-radius: 8px; display: flex; flex-direction: column; background: #fff; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+  .col-header { color: white; text-align: center; font-weight: bold; font-size: 14px; padding: 15px 10px; border-top-left-radius: 5px; border-top-right-radius: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .col-body { padding: 15px; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 15px; }
+  
+  /* Colors matching the provided image */
+  .c-blue { border-color: #17365D; background: #F0F4F8; }
+  .c-blue .col-header { background: #17365D; }
+  
+  .c-orange { border-color: #E36C0A; background: #FDF2E9; }
+  .c-orange .col-header { background: #E36C0A; }
+  
+  .c-teal { border-color: #31859B; background: #E8F8F5; }
+  .c-teal .col-header { background: #31859B; }
+  
+  .c-green { border-color: #76923C; background: #E9F7EF; }
+  .c-green .col-header { background: #76923C; }
+  
+  .c-lightgreen { border-color: #9BBB59; background: #F1F8E9; }
+  .c-lightgreen .col-header { background: #9BBB59; }
+
+  .block { background: white; border: 2px solid #ddd; border-radius: 6px; padding: 15px 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
+  .block-title { font-weight: 700; font-size: 14px; color: #2c3e50; margin-bottom: 8px; }
+  .block-desc { font-size: 12px; color: #555; line-height: 1.4; }
+  
+  .block-highlight { background: #FFFDE7; border-color: #F1C40F; border-width: 2px; }
+  
+  .connector { display: flex; align-items: center; justify-content: center; width: 30px; }
+  .arrow { width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 15px solid #7f8c8d; }
+  
+  .final-output { background: #2C3E50; border-color: #1A252F; color: white; margin-top: 20px;}
+  .final-output .block-title { color: white; font-size: 16px;}
+  .final-output .block-desc { color: #F1C40F; font-weight: bold; font-size: 14px;}
+</style>
+</head>
+<body>
+  <div class="header">Expert System: Hybrid GenAI-Residual Model<br>with Confidence Gating for Battery RUL</div>
+  
+  <div class="diagram">
+    <!-- Col 1 -->
+    <div class="col c-blue">
+      <div class="col-header">Multi-Case Data Pool</div>
+      <div class="col-body">
+        <div class="block">
+          <div class="block-title">NASA Dataset (B0005)</div>
+          <div class="block-desc">Last 3000 Rows<br>Sequence Length: 96</div>
+        </div>
+        <div class="block">
+          <div class="block-title">Case 1</div>
+          <div class="block-desc">Single Foundation<br>(Chronos Only Baseline)</div>
+        </div>
+        <div class="block">
+          <div class="block-title">Case 2</div>
+          <div class="block-desc">Partial Hybrid<br>(Chronos + PatchTST)</div>
+        </div>
+        <div class="block">
+          <div class="block-title">Case 3</div>
+          <div class="block-desc">Full Ensemble<br>(Chronos + PatchTST + TTM)</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="connector"><div class="arrow"></div></div>
+
+    <!-- Col 2 -->
+    <div class="col c-orange">
+      <div class="col-header">Chronos Foundation Layer</div>
+      <div class="col-body">
+        <div class="block">
+          <div class="block-title">Multi-Context Lengths</div>
+          <div class="block-desc">Length = 96<br>Length = 48</div>
+        </div>
+        <div class="block">
+          <div class="block-title">Zero-Shot Inference</div>
+          <div class="block-desc">Stochastic Sampling<br>(12 Samples)</div>
+        </div>
+        <div class="block">
+          <div class="block-title">Uncertainty Aggregator</div>
+          <div class="block-desc">Inverse-Variance Blend</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="arrow"></div></div>
+
+    <!-- Col 3 -->
+    <div class="col c-teal">
+      <div class="col-header">Refinement Ensemble Module</div>
+      <div class="col-body">
+        <div class="block">
+          <div class="block-title">PatchTST</div>
+          <div class="block-desc">Transformer Refinement<br>(Patch-based: 16, Stride: 8)</div>
+        </div>
+        <div class="block">
+          <div class="block-title">TinyTimeMixer</div>
+          <div class="block-desc">MLP Projection<br>(Dense Feature Mapping)</div>
+        </div>
+        <div class="block block-highlight">
+          <div class="block-title">Optimized Hyperparameters</div>
+          <div class="block-desc" style="text-align: left; padding-left: 15px;">
+            • Batch Size: <b>128</b><br>
+            • Learn Rate: <b>0.01</b><br>
+            • Epochs: <b>50</b><br>
+            • Dropout: <b>0.10</b><br>
+            • Loss: <b>0.7 L1 + 0.3 MSE</b>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="arrow"></div></div>
+
+    <!-- Col 4 -->
+    <div class="col c-green">
+      <div class="col-header">Confidence-Aware Gating</div>
+      <div class="col-body">
+        <div class="block">
+          <div class="block-title">Stability Gating</div>
+          <div class="block-desc">Dynamic 60/40 Blending<br>across temporal batches</div>
+        </div>
+        <div class="block">
+          <div class="block-title">EMA Low-Pass Filter</div>
+          <div class="block-desc">Temporal Smoothing<br>(β = 0.7)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="arrow"></div></div>
+
+    <!-- Col 5 -->
+    <div class="col c-lightgreen">
+      <div class="col-header">Calibration & Safety Guard</div>
+      <div class="col-body">
+        <div class="block">
+          <div class="block-title">Meta-Calibration</div>
+          <div class="block-desc">Ridge Affine Mapping<br>(y = a*p + b)</div>
+        </div>
+        <div class="block">
+          <div class="block-title">Outlier Guard</div>
+          <div class="block-desc">Adaptive Clipping<br>(μ ± 3σ)</div>
+        </div>
+        <div class="block final-output">
+          <div class="block-title">Standardized RUL Forecast</div>
+          <div class="block-desc">72.11% Error Reduction vs Base</div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</body>
+</html>

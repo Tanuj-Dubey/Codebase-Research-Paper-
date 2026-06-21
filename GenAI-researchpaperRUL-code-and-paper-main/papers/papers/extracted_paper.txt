@@ -1,0 +1,1395 @@
+Vol.:(0123456789)
+The Journal of Supercomputing
+https://doi.org/10.1007/s11227-024-06264-w
+1 3
+Enhancing EV lithium‑ion battery management: automated 
+machine learning for early remaining useful life prediction 
+with innovative multi‑health indicators
+Shivendu Mishra1,2 · Anurag Choubey1,3 · Bollampalli Areen Reddy1 · 
+Rajiv Misra1
+Accepted: 21 May 2024 
+© The Author(s), under exclusive licence to Springer Science+Business Media, LLC, part of Springer Nature 
+2024
+Abstract
+Addressing the need for multiple health indicators is critical to improving prediction 
+accuracy and reducing the limitation of reliance on a single health indicator. This 
+paper presents an AutoML model for accurately forecasting the life span of lithium-
+ion batteries (LIBs) in electric vehicles. Unlike previous studies focusing solely on 
+constant current (CC) and constant voltage (CV) charging, our AutoML approach 
+includes ICA and direct analysis to generate eight novel multi-dimensional health 
+indicators. These novel comprehensive indicators characterizing battery aging, 
+including the position values of CC charging (IC_CC_P), the peak of CV charg-
+ing (IC_CV_ H), and the peak/position of CC discharging (IC_D_H, IC_D_ P), 
+are chosen based on correlation analysis and combined with four health indicators 
+from direct analysis, i.e., capacity, cycle, cluster, and checkpoint, to improve predic-
+tion accuracy. K-means clustering is employed to group similar data points. At the 
+same time, the ruptures library facilitates the implementation of a novel algorithm 
+for change point detection, allowing for the identification of checkpoints within 
+each battery dataset. Experimental validation using NASA’s AMES LIB cycle life 
+datasets demonstrates a significant performance improvement from existing recent 
+methods, with 58.93 % lower mean absolute error (MAE) and 52.66 % lower root-
+mean-square error (RMSE) compared to recent AutoML-based methods. This shows 
+a significant improvement in forecasting the RUL of electric vehicle LIBs using the 
+proposed AutoML-based approach with novel multi-dimensional health indicators.
+Keywords AutoML · Electric vehicle · Incremental capacity curve · Lithium-ion 
+battery · Prognostics and health management · Remaining useful life prediction
+Extended author information available on the last page of the article
+ S. Mishra et al.
+1 3
+1 Introduction
+The significant impact of fossil fuel-based transport on air pollution and greenhouse 
+gas emissions has been widely acknowledged [1, 2]. Advanced environmentally 
+friendly technologies offer promising solutions to reduce greenhouse gas emissions 
+and enhance air quality [3, 4]. Lithium-ion batteries (LIBs) have gained prominence 
+in emerging technologies due to their impressive energy density and extended oper -
+ational life [5–8]. LIBs are the preferred considerations for energy storage options 
+in electric vehicles (EVs), and their secure use promotes secondary utilization and 
+material recycling, thereby reducing the carbon footprint during production and 
+recycling phases [9]. Consequently, the reliability and safety of LIBs have become 
+areas of focus.
+Nevertheless, it is crucial to recognize that the decline in the performance of 
+LIBs is an inevitable process [10]. Traditionally, LIBs have reached the end of their 
+operational life when their capacity drops to approximately 70 % of the initial value 
+or when the internal resistance doubles. Even at this stage, LIBs can still find appli-
+cations in various capacities, such as energy storage systems and electric bicycles 
+[11]. However, unlike controlled laboratory conditions, real-world usage patterns 
+may result in erratic battery performance and capacity degradation. This unpredicta-
+bility can lead to inefficient battery cell usage, resource wastage, and potential safety 
+hazards without precise RUL predictions. A comprehensive understanding of evolv-
+ing degradation patterns in battery life span is crucial to avoiding premature replace-
+ments and excessive usage. Consequently, predicting the life span and estimating the 
+capacity of lithium-ion batteries present substantial challenges.
+Predicting the RUL of LIBs involves both model-driven and data-driven 
+approaches. In the model-driven system, intricate mathematical formulations are 
+created by leveraging the inherent aging process of batteries. These models are 
+carefully designed with mechanistic knowledge obtained through mathematical 
+deduction. Techniques such as the expectation-maximization method [12] and the 
+extended Kalman filtering method [13] are mathematical approaches to parameter -
+izing these models. However, achieving precise forecasts is challenging due to the 
+intricacy of the battery aging process and potential disparities between data disper -
+sion and the assumptions of the underlying framework.
+The data-driven technique has gained prominence due to its accessibility to data 
+and advancements in machine learning techniques, including machine learning, arti-
+ficial neural networks, and deep learning, for forecasting RUL. In data-driven RUL 
+forecasting, two main approaches are typically followed: One directly utilizes the 
+data for RUL predictions, while the other involves preprocessing the data to extract 
+relevant health indicators. Subsequently, appropriate models are applied to these 
+indicators for RUL prediction.
+Various direct data-driven techniques are employed for forecasting the RUL 
+of LIBs. These include traditional machine learning models such as GBDT [14], 
+Gaussian regression [15], and random forest [16]. Additionally, deep learning 
+techniques, including MLP [17], RNN [18], LSTM [8 ], Dual-LSTM [19], GRU 
+[20], and Transformers [21], are widely utilized. These methods present various 
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+advantages and trade-offs concerning computational efficiency and their capac-
+ity to capture temporal information and long-range dependencies. Transformers, 
+known for their effectiveness in encoding sequences, are gaining attention for 
+their potential to enhance RUL prediction alongside traditional physical models.
+Numerous research studies have focused on predicting batteries’ RUL through 
+data-driven methods. These approaches involve extracting health indicators (HIs) 
+from diverse sources and training predictive models using these indicators. The 
+research encompasses a variety of health indicators and methodologies, includ-
+ing input voltage, current, and temperature measurements, as well as factors such 
+as incremental capacity curves, charge–discharge periods, isobaric voltage drop 
+time, and more [15, 16, 22–28].
+A data-driven RUL forecasting model using machine learning and deep learn-
+ing is effective but demands expertise in setup and hyperparameter tuning [29]. 
+Complex models with numerous hyperparameters require laborious effort. There 
+is a growing need for models with adaptable structures to enhance data-driven 
+exploration in RUL prediction and reduce human intervention. AutoML addresses 
+this by automatically selecting models and adjusting hyperparameters based on 
+data characteristics. In a recent study by Luo et al. [30], AutoML techniques [31] 
+running in the AutoSklearn architecture were employed to predict the RUL of 
+LIBs. Health indicators (HIs) were extracted through incremental capacity (IC) 
+analysis, and a smoothing IC curve based on the Kalman filter algorithm was 
+applied. Three HIs were identified as effective in characterizing the aging phe-
+nomenon during the charging process, including the constant current (CC) and 
+voltage (CV) phases.
+However, the method outlined in [30] requires prolonged training time and 
+concentrates solely on the CC–CV charge cycle, neglecting discharge cycle data 
+in deriving health indicators. This limitation makes it less suitable for rapid and 
+dynamic RUL prediction. Furthermore, the recent literature surveys suggest that the 
+aging pattern of lithium batteries is strongly associated with the peaks observed in 
+the IC curve during both charging and discharging cycles [32–34].
+Additionally, features extracted from the CC discharge phase, such as voltage 
+degradation rate and capacity fade, are critical for detecting signs of battery degra-
+dation. Furthermore, changes in discharge curve characteristics over time can indi-
+cate aging-related phenomena such as electrode degradation, electrolyte decompo-
+sition, and impedance growth, all of which affect the battery’s RUL. Nonetheless, 
+constant current discharge in lithium-ion battery analysis supports controlled experi-
+ments, simplifies data collection, and improves replicability. Its simple voltage and 
+current profiles make analysis easier, ensuring safety within specified limits while 
+increasing efficiency in battery characterization and predictive modeling.
+Thus, keeping the above in mind, to enhance RUL estimation, this paper intro-
+duces AutoML experiments for predictions, incorporating novel multi-health indi-
+cators from both the CC and CV charging phases, along with the CC discharging 
+phase, with the intention of achieving higher accuracy. The significant contributions 
+of this method include: 
+ S. Mishra et al.
+1 3
+ i. Introducing models designed for minimal human intervention and flexible struc-
+tures for predicting RUL trends in LIBs.
+ ii. Four of the eight novel health indexes (HIs) are derived from the optimized 
+incremental capacity (IC) curve across CC charging, CV charging, and CC 
+discharging phases: position values of CC charging (IC_CC_P), the peak of 
+CV charging (IC_CV_H), and the peak/position of CC discharging (IC_D_H, 
+IC_D_P). The other four HIs—cycle count, battery capacity, clusters, and 
+checkpoints—are based on direct analysis.
+ iii. HIs are selected based on their strong correlation with the battery’s capacity, 
+assessed through Pearson and Spearman correlation analyses.
+ iv. K-means clustering explored capacity degradation variability across tempera-
+ture, voltage, and current settings. The ruptures library implemented a novel 
+algorithm for change point detection, identifying significant capacity degrada-
+tion points in lithium-ion battery datasets.
+ v. The proposed methods’ performance was validated in three scenarios: for indi-
+vidual batteries, in the 2P1 configuration, and using a leave-one-out strategy.
+ vi. The analysis was conducted using four AutoML models: AutoKeras, TPOT, 
+H2O, and AutoTS. The preferred AutoML model, H2O, exhibited impressive 
+performance metrics: an MAE of 0.0138, an RMSE of 0.0196, and an R-square 
+value of 0.9896. Compared to recent methods, the H2O model outperformed 
+the state-of-the-art AutoML22 [30], with a 58.93 % reduction in MAE and a 
+52.66 % reduction in RMSE.
+Table 1 displays relevant symbols and definitions utilized across the paper.
+Furthermore, the paper’s structure is as follows: Section 2 concisely reviews prior 
+research on predicting the RUL of LIBs. In Sect.  3, the paper extensively explores 
+the problem formulation and thoroughly analyses the automated machine learning 
+(AutoML) pipeline. Section  4 presents the methodology, encompassing method 
+architecture, dataset visualization, novel multi-health indicators (HIs) extraction, 
+correlation analysis, and the training process. Section  5 delves into performance 
+Table 1  Notations with their definitions
+Notations Definitions
+EV, RUL, HIs Electric vehicle, remaining useful life prediction, health indicators, respectively
+AutoML Automated machine learning
+CC, IC Constant current, incremental capacity curve, respectively
+LIBs, CV Lithium-ion batteries, constant voltage phase, respectively
+MAE, RMSE The mean absolute error, the root-mean-square error, respectively
+ICA, SOH Incremental capacity analysis, state of health, respectively
+IC_CC_P, IC_CV_H The position values of CC charging, the peak of CV charging, respectively
+IC_D_H, IC_D_P The peak and position of the CC discharging, respectively
+OCV, ANN, UDDS Open-circuit voltage, artificial neural network, Urban Dynamometer Driving 
+Schedule, respectively
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+metrics and comprehensively presents experimental results. Finally, in Sect.  6, the 
+paper summarizes key findings and draws insights from the conducted research.
+2  Related work
+Employing a data-centric framework, we leverage historical data to forecast battery 
+degradation patterns. The weight parameters in this framework are meticulously 
+determined through comprehensive training data analysis, eliminating the need for 
+reliance on physics-based techniques. The widespread acknowledgment of data-
+driven approaches is attributed to their adaptability and extensive applicability on 
+a global scale. Data-driven RUL prediction employs two primary strategies: The 
+first directly utilizes raw data for RUL predictions, while the second involves an ini-
+tial preprocessing step to extract essential health indicators. Subsequently, special-
+ized models are applied to these indicators, ensuring accurate and effective RUL 
+predictions.
+Richardson et al. [35] proposed a Gaussian process regression algorithm for fore-
+casting the RUL of LIBs, demonstrating outstanding long-term forecasting perfor -
+mance. In another study by Yun et al. [36], a hybrid prognostic approach for RUL 
+estimation in LIBs was introduced, integrating the gray model, autoregressive inte-
+grated moving average, and variational mode decomposition models to form a com-
+prehensive RUL prediction strategy. Additionally, Zhang et  al. [37] presented an 
+innovative method for estimating the SOH and predicting RUL in LIBs, utilizing the 
+IC curve during the constant current discharge phase and an ANN with four layers. 
+Furthermore, Sun et al. [38] proposed a cloud-edge collaborative technique to esti-
+mate the SOH in LIBs and optimize capacity prediction, incorporating a backpropa-
+gation neural network enhanced by a genetic algorithm.
+Researchers have recently delved into diverse deep learning methods for predict-
+ing different systems’ RUL. Dong et al. [39] addressed the gradient explosion issue 
+in RUL prediction by employing long short-term memory (LSTM). Zraibi et al. [40] 
+introduced a comprehensive CNN-LSTM-DNN algorithm, leveraging each hybrid 
+approach to enhance RUL prediction significantly. Wang and colleagues [41] pro-
+posed an innovative mixed method for online life prediction, combining a bidirec-
+tional LSTM with attention mechanism (BiLSTM-AM) model with support vector 
+regression (SVR). This method involved gathering initial data, updating them with 
+SVR, and utilizing BiLSTM-AM to estimate cycle life. In another approach, Tang 
+[42] used a self-designed LSTM network named IRes2Net-BiGRU-FC and a deep 
+neural network (DNN) to predict both high-frequency and low-frequency compo-
+nents of the original data, demonstrating robust RUL prediction during both the CC 
+and CV phases.
+Data-driven RUL prediction based on HIs involves extracting these indicators and 
+subsequent model training, with numerous scholars conducting extensive research 
+in this domain. Ansari et al. [22] explored RUL prediction using health indicators. 
+In contrast, Wang et al. [23] considered voltage, current, and temperature measure-
+ments as HIs for RUL prediction, employing the gradient boosting decision tree. 
+Meng et al. [15] and Wang et al. [24] adopted a multi-HI approach, extracting data 
+ S. Mishra et al.
+1 3
+from incremental capacity curves and charge–discharge periods, utilizing the Box-
+Cox transformation method to construct a battery state of health estimation frame-
+work. Zhang et al. [25] used isobaric voltage drop time as an HI, comparing various 
+neural network models for battery RUL prediction. Li et al. [26] derived the open-
+circuit voltage (OCV) from current pulses as an HI, deploying support vector regres-
+sion optimized by the swarm algorithm to address nonlinear data processing and 
+convergence accuracy. Yang et al. [16] considered capacity degradation and inter -
+nal resistance growth as HIs for battery SOH estimation. Liu et  al. [27] regarded 
+battery OCV, current, and impedance as HIs, employing adaptive Brownian motion 
+for SOH estimation. Additionally, Liu et  al. [28] utilized light gradient boosting 
+machines (LightGBM) with various HIs, including electrochemical impedance spec-
+troscopy, OCV, temperature, and incremental capacity–differential voltage (IC–DV) 
+curves for RUL prediction.
+Furthermore, limited studies have embraced intra-battery [22, 43] and inter-bat-
+tery [44, 45] transfer learning approaches. These approaches have been explored 
+across various lithium-ion battery datasets prepared under similar or heterogeneous 
+charge–discharge and temperature settings.
+AutoML has recently addressed the challenges of machine learning and deep 
+learning base models, which often require setup and hyperparameter tuning exper -
+tise. AutoML selects models and adjusts hyperparameters based on data character -
+istics [31, 46]. AutoML has been used in a variety of domains, including natural 
+language processing [47], stock forecasting [46, 48], COVID-19 pandemic analy -
+sis [49], video analytics [50], computer vision [51], and RUL prediction [52]. It 
+simplifies model selection and hyperparameter tuning. Although successful, the 
+use of AutoML for forecasting RUL remains in its early stages and poses unique 
+challenges.
+In recent work, AutoML22 [30], an AutoML model based on AutoSklearn archi-
+tecture, has been applied to predict the RUL of LIBs by extracting HIs through 
+incremental capacity (IC) analysis. The authors comprehensively analyzed the CC 
+and CV phases, emphasizing the strong correlation between the IC curve during the 
+CC phase and the charging capacity in the CV phase and their impact on battery life 
+span. Furthermore, estimating lithium-ion battery SOH or RUL through ICA has 
+gained significant attention. Researchers in [53, 54] have demonstrated a strong cor-
+relation between the peak position and intensity of the IC curve during constant cur-
+rent charging processes and the deterioration of LIB’s State Of Health (SOH). Addi-
+tionally, the aging pattern of lithium batteries is closely associated with the peaks 
+observed in the IC curve during both charging and discharging cycles [32–34].
+Considering the significant associations observed with health indicators derived 
+from the discharge cycle IC curve in tracking capacity changes and the practical 
+importance of constant current discharge cycles, which facilitate controlled experi-
+ments, reduce external factors, and ensure consistent data collection, thereby 
+enhancing the efficiency and reliability of lithium-ion battery characterization and 
+predictive modeling endeavors. Moreover, recognizing the importance of an auto-
+mated machine learning model in streamlining model selection, hyperparameter 
+optimization, and feature selection processes, along with incorporating multiple 
+health indicators for improved prediction accuracy and addressing the limitations 
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+of relying solely on a single health indicator. This paper aims to leverage incremen-
+tal capacity analysis (ICA), which involves extracting various health indicators from 
+the constant current (CC) and constant voltage (CV) charging phases, as well as the 
+constant current (CC) discharging phases, along with additional health indicators 
+obtained through direct analysis (cycle count, battery capacity, clusters, and check -
+points). The central objective is to significantly enhance prediction accuracy by inte-
+grating diverse health indicators.
+3  Background
+This section outlines the problem formulation and introduces the AutoML frame-
+works (models) employed for our analysis.
+3.1  Problem formulation
+Accurate prediction of RUL in electric vehicle LIBs is critical for ensuring EV bat-
+tery system reliability. The Prognostics and Health Management (PHM) discipline 
+emphasizes the importance of RUL in ensuring device safety, preventing unexpected 
+failures, informing maintenance decisions, and conducting SOH assessments.
+The State Of Health (SOH), a crucial health indicator for battery aging, reflects 
+the battery’s condition throughout each charge–discharge cycle. SOH plays a sig-
+nificant role in assessing the extent of battery degradation, often quantified by the 
+capacity ratio [55].
+Here, Cr represents the rated capacity, while C t denotes the measured capacity for 
+cycle t.
+Moreover, battery End-Of-Life (EOL), closely tied to its capacity, is the point at 
+which the remaining capacity reaches 70–80 % of the initial capacity, corresponding 
+to a SOH of 0.7–0.8. Consequently, RUL signifies the available service time (num-
+ber of charge and discharge cycles) remaining before the battery’s capacity deterio-
+rates to the failure threshold of 70-80 % of its initial capacity [21].
+This paper used capacity prediction to indirectly forecast RUL by leveraging the 
+previously established relationship between SOH and RUL. This approach is con-
+sistent with methodologies reported in the existing data-driven RUL forecasting lit-
+erature, as cited in related works.
+3.2  AutoML frameworks
+AutoML automates machine learning tasks, minimizing or eliminating manual 
+efforts. It aims to empower non-experts, allowing them to apply machine learn-
+ing techniques without expertise in a particular field or technology. Most AutoML 
+methods’ primary objective is automating the machine learning pipeline, i.e., model 
+(1)SOH (t)= C t
+C r
+%
+ S. Mishra et al.
+1 3
+selection, hyperparameter optimization, and feature selection processes. Tradition-
+ally, various approaches addressed only specific aspects of this pipeline. However, 
+recent years have witnessed the emergence of fully automated AutoML approaches, 
+marking a significant shift from partial automation to comprehensive solutions 
+[56–58]. The complete pipeline of the AutoML-based system is depicted in Fig.  1, 
+accompanied by a complete description of the main components of AutoML out-
+lined below:
+3.2.1  Model selection
+AutoML’s primary aim is to autonomously identify the most accurate machine 
+learning framework from a given set for a specific dataset. To accomplish this, 
+AutoML typically employs a technique called algorithm selection or meta-learning. 
+This involves evaluating various machine learning algorithms, such as decision 
+trees, random forests, support vector machines, and neural networks, and selecting 
+the one that demonstrates the best performance on the dataset. AutoML frameworks 
+often include libraries of preimplemented algorithms, enabling them to systemati-
+cally explore various models and configurations efficiently [60].
+3.2.2  Hyperparameter optimization (HPO)
+Hyperparameters are parameters that control the learning process and affect the 
+performance of a machine learning model. Examples include the number of hidden 
+layers, batch size, activation function, optimizer, and learning rate. Hyperparameter 
+optimization, known as hyperparameter tuning, involves searching for the best com-
+bination of hyperparameters to maximize the model’s performance on a validation 
+dataset. Hyperparameter optimization is crucial in machine learning, especially with 
+the scaling of neural networks to improve precision. Traditional optimization relies 
+Fig. 1  A glimpse into the AutoML pipeline [59]
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+on experiential values, but credibility in experimental values is limited due to the 
+absence of logical thought and knowledge. AutoML approaches use techniques such 
+as grid search, random search, genetic algorithms, gradient descent, and Bayesian 
+optimization to efficiently explore the hyperparameter space and identify the optimal 
+settings for each model [61].
+3.2.3  Feature selection
+AutoML incorporates automated feature engineering to streamline the manual and 
+repetitive tasks involved in this process. Feature engineering entails creating new 
+features or transforming existing ones to enhance the performance of machine learn-
+ing models. This can include scaling, normalization, encoding categorical variables, 
+generating interaction terms, and utilizing dimensionality reduction techniques like 
+principal component analysis.
+AutoML frameworks often integrate automated feature engineering capabilities 
+that preprocess the data, select relevant features, and generate new ones to improve 
+model performance. These techniques can be applied individually or in combination 
+with other feature selection and extraction methods to optimize predictive power. 
+Various systems, such as ExploreKit, Data Science Machine, and Cognito, have 
+been developed for automatic feature engineering. ExploreKit ranks features using 
+meta-features and machine learning algorithms, while the Data Science Machine 
+employs profound feature synthesis for relational data. Cognito utilizes a hierarchi-
+cal approach to feature construction, enhancing precision through a greedy strat-
+egy. These systems streamline and automate the feature engineering process within 
+AutoML.
+4  Methodology
+This section covers the architecture of the suggested method in detail, describes 
+the dataset used and how it was visualized, and explains how multi-health indica-
+tors were extracted. Next, we will demonstrate AutoML-based models, including 
+AutoTS, TPOT, H2O, and AutoKeras. We also present the findings from the correla-
+tion analysis results alongside the model training process in three scenarios: indi-
+vidual battery, 2P1, and leave-one-out.
+4.1  Architecture
+Accurately estimating RUL through historical data necessitates using an optimal 
+feature extraction technique that effectively captures features strongly correlated 
+with RUL. The proposed method prioritizes enhancing RUL prediction accuracy by 
+extracting critical health indicators associated with the aging of LIBs.
+The proposed work utilized a dataset from the NASA AMES Prognostics Center 
+focusing on the aging of 18,650 lithium-ion batteries, specifically analyzing four 
+ S. Mishra et al.
+1 3
+batteries labeled B005, B006, B007, and B0018. The methodology involved lev -
+eraging multiple health indicators (HIs) obtained through ICA and direct analysis. 
+The IC curve was initially computed during the constant current (CC) and constant 
+voltage (CV) charging phases, extracting two HIs: maximum point height and posi-
+tion. Subsequently, another IC curve was generated for the CC discharge phase, 
+extracting two additional HIs: maximum point height and position. Only four of the 
+six obtained HIs were selected following widely used Pearson and Spearman cor -
+relation analyses. These included the position values of CC charging (IC_CC_P), 
+peak of CV charging (IC_CV_H), and peak/position of CC discharging (IC_D_H, 
+IC_D_P). These four HIs, combined with the four HIs acquired from direct analysis, 
+i.e., capacity, cycle, cluster, and checkpoint, resulted in eight HIs. Collectively, these 
+eight health indicators (HIs) comprehensively characterize the battery’s aging pro-
+cess during both the charging and discharging phases. Moreover, the AutoML model 
+utilizes these eight HIs to predict the RUL.
+The proposed methodology is visually depicted in Fig.  2, providing a clear over-
+view of the approach. The architecture presented in Fig.  2, portraying the proposed 
+model, is primarily composed of four main sections:
+• Extraction of HIs (IC_CC_P and IC_CV_H) from charge cycles through con-
+stant current and constant voltage data extraction.
+• Extraction of HIs (IC_D_H and IC_D_P) from discharge cycles using constant 
+voltage discharge cycle data.
+• Extraction of HIs (capacity, cycle, cluster, and checkpoint) from direct analysis.
+• Utilization of an AutoML model for RUL prediction.
+These obtained HIs are partitioned into training and testing datasets. The training 
+data are then utilized to instruct an AutoML model (H2O), with capacity as the tar -
+get variable. Subsequently, the model is applied to predict capacity, and its accuracy 
+and efficiency are evaluated using the detailed evaluation method discussed in sub-
+sequent sections.
+4.2  Dataset visualization
+The dataset employed in the experiment in this study was obtained from the NASA 
+AMES Prognostics Center of Excellence, focusing on aging data for 18,650 LIBs 
+[62]. Specifically, we selected data from four LIBs, identified as B005, B006, B007, 
+and B0018, to conduct our analysis. These batteries underwent standard charging 
+and discharging processes at a constant temperature of 25 degrees Celsius. The 
+charging protocol adhered to CC and CV principles. During the CC phase, the volt-
+age was incrementally raised to 4.2 V while maintaining a constant current of 1.5 A. 
+Subsequently, the voltage was held at 4.2 V under constant voltage conditions until 
+the charge current dropped to 20 mA, marking the transition to the CV phase. For 
+discharging, a constant current of 2 A was applied until the voltage of each battery 
+(B005, B006, B007, and B0018) reached specific cutoff voltages: 2.7 V, 2.5 V, 2.2 
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+V, and 2.5 V, respectively. The experiments concluded when the battery capacity 
+had deteriorated to 70 % of its initial capacity.
+The charge–discharge cycles conducted for batteries B005, B006, B007, and 
+B0018 were 168, 168, 168, and 132, respectively. Figure  3 visually represents the 
+specifications of the NASA AMES battery dataset.
+Fig. 2  Architecture of the proposed model
+Fig. 3  Specifications of the NASA AMES battery dataset
+ S. Mishra et al.
+1 3
+Furthermore, Fig.  4 visually depicts the degradation trends of battery capac-
+ity over diverse cycle numbers, demonstrating that the capacity consistently drops 
+below the critical threshold of 70 % for batteries B005, B006, B007, and B0018 
+within 168, 168, 168, and 132 cycles, respectively. Additionally, the sample of the 
+charging and discharging datasets of one battery B005 is shown in Tables  2 and 3, 
+respectively.
+Moreover, given the battery’s charging process, which involves CC, CV charge, 
+and CC discharge cycle phases, visualizing it becomes imperative. Figure  5 visu-
+ally represents the CC–CV phase for each battery charge cycle. It showcases the 
+dynamic evolution of current and voltage throughout the different phases of the bat-
+tery charging cycle. The depiction commences with the constant current (CC) phase, 
+where the battery charges until it reaches a predefined voltage limit. Subsequently, a 
+smooth transition occurs into the constant voltage (CV) phase, where charging con-
+tinues until the current drops to a predetermined threshold, typically set at 20 mA. 
+Similarly, Fig.  6 visually portrays the voltage variations throughout the discharge 
+cycle for each battery. This illustration unveils a gradual decrease in voltage as the 
+CC discharge cycle progresses, providing valuable insight into the voltage dynamics 
+during the battery’s discharge process.
+During CC discharge, observing parameters like voltage drop and discharge 
+curve shape provides valuable insights into the battery’s performance characteristics 
+and efficiency in delivering power to the vehicle. Moreover, features extracted from 
+the CC discharge phase, such as voltage degradation rate and capacity fade, play 
+a critical role in identifying signs of battery degradation. Additionally, changes in 
+discharge curve characteristics over time can signify aging-related phenomena such 
+Fig. 4  Capacity degradation trends of the NASA AMES battery dataset
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+Table 2  Sample of charging dataset
+Index Cycle Ambient temp. Date
+Time
+Voltage measured Current measured Temp. measured Current Voltage Time
+0 1 24 02-04-2008 13:08:17 3.8730 −0.00120 24.6554 0.0 0.003 0.00
+1 1 24 02-04-2008 13:08:17 3.4794 −4.0303 24.6665 −4.036 1.570 2.5320
+2 1 24 02-04-2008 13:08.17 4.0006 1.5127 24.6754 15.0 4.726 5.5
+3 2 24 02-04-2008 13:08:17 4.0124 1.5091 24.6939 1.5 4.742 8.3440
+4 2 24 02-04-2008 13:08:17 4.0197 1.5113e+11 24.7051 1.5 4.753 11.1250
+5 2 24 02-04-2008 13:08:17 4.0254 1.5128e+11 24.7181 1.498 4.758 13.8910
+ S. Mishra et al.
+1 3
+Table 3  Sample of discharging dataset
+Index Cycle Ambient temp. Date
+Time
+Capacity Voltage measured Current measured Temp. measured Current Voltage Time
+0 1 24 02-04-2008 15:25 1.8565 4.1915 −0.0049 24.3300 −0.0006 0 0
+1 1 24 02-04-2008 15:25 1.8565 4.1907 −0.0015 24.3260 −0.0006 4.206 16.781
+2 1 24 02-04-2008 15:25 1.8565 3.9749 −2.0125 24.3891 −1.9982 3.062 35.703
+3 1 24 02-04-2008 15:25 1.8565 3.9517 −2.0140 24.5448 −1.9982 3.030 53.781
+4 1 24 02-04-2008 15:25 1.8565 3.9344 −2.0111 24.7314 −1.9982 3.011 71.922
+5 1 24 02-04-2008 15:25 1.8565 3.9201 −2.0130 24.9098 −1.9982 2.991 90.094
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+as electrode degradation, electrolyte decomposition, and impedance growth, all of 
+which impact the battery’s RUL. Constant current discharge in lithium-ion battery 
+analysis offers several practical advantages. It facilitates controlled experiments, 
+reduces external factors, and ensures consistent data collection. Experiments are 
+easily replicable, with the discharge current remaining constant across trials or labo-
+ratories. The straightforward voltage and current profiles also simplify data analysis, 
+aiding in extracting crucial information. Safety is prioritized, as constant current dis-
+charge can be conducted within specific voltage and current limits, reducing safety 
+hazards associated with high discharge rates. Constant current discharge enhances 
+the efficiency and reliability of lithium-ion battery characterization and predictive 
+modeling endeavors.
+4.3  Multi‑health indicators extraction
+This section examines the methodology used to determine the health indicators pre-
+sented in this paper. We determined health indicators for all four batteries.
+Fig. 5  Current and voltage of the charging NASA AMES battery dataset in different charge cycles
+ S. Mishra et al.
+1 3
+4.3.1  ICA‑based HIs extraction
+In recent years, the assessment of the RUL of LIBs through the incremental capacity 
+analysis (ICA) method has garnered substantial interest among researchers. The ICA 
+method transforms the low-dimensional voltage–capacity curve of the LIB, commonly 
+known as the V–Q curve, into a higher-dimensional incremental capacity ( dQ∕dV
+)–voltage (V) curve. This dQ∕dV –V curve is obtained by determining the disparity 
+between battery capacity changes and battery terminal voltage changes. The formula-
+tion for computing the IC curve in CC charging, CV charging, and CC discharging 
+phases is as follows:
+(2)ICCC−charging = dQ c
+dV c
+≈ ΔQ c
+ΔV c
+= icΔt
+V c2
+− V c1
+Fig. 6  Change in the NASA AMES battery dataset voltage in different discharge cycles
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+Qc signifies the battery’s charging capacity, while Vc represents its terminal voltage 
+during the charging phase. On the other hand, Qd denotes the battery’s discharging 
+capacity, and Vd corresponds to its terminal voltage during the discharging process. 
+Furthermore, we have ic , which denotes the charging current, and id , representing the 
+discharging current. The variable t is employed to represent time.
+The IC curves method serves as an effective means of translating the character -
+istic voltage plateaus in a battery’s behavior into discernible variations on the IC 
+curve. These variations are crucial in accurately detecting subtle changes as the bat-
+tery undergoes aging [63, 64]. Notably, the aging process, particularly during charg-
+ing, influences the extent of reactions between the battery’s electrodes. While these 
+variations might not be immediately apparent in the voltage curve, they manifest as 
+inflection points or peaks in the IC curve [64]. This characteristic allows for valua-
+ble monitoring of the battery’s condition and potentially forecasting its aging trajec-
+tory. As the capacity gradually degrades due to aging, these changes become quan-
+titatively identifiable within the IC curve, rendering it a powerful tool for assessing 
+battery health and performance.
+Consequently, in the scope of our analysis, the position and height of the peak 
+within the CC charging and CV charging IC curves, respectively, form the founda-
+tion for deriving two health indices. Likewise, the height and position of the peak 
+within the discharging IC curve are utilized to compute our other two health indices. 
+Figures 7 and 8 visually present the pivotal IC curves for each battery during CC 
+charge and CC discharge cycles, respectively. These figures offer essential insights 
+for our analysis, highlighting the distinctive features and variations in the IC curves 
+across different charging and discharging conditions.
+Furthermore, plotting the IC curve can result in a distorted transmission of char -
+acteristics during the CV charging phase. Similar to recent works, AutoML22 [30], 
+the CV phase’s HIs can be directly extracted without needing conversion through 
+the IC method to ensure undistorted transmission of characteristics.
+4.3.2  Direct analysis‑based HIs extraction
+We have integrated cycle count, battery capacity, clusters, and checkpoints data 
+directly obtained from the dataset as four additional HIs. Together with the existing 
+four HIs computed with the IC curve, these collectively constitute eight HIs utilized 
+in predicting the RUL of EV LIBs. A visual representation of a sample of these 
+eight health indicators is presented in Fig. 9.
+Where the terms IC_CV_H, IC_CC_P, IC_D_H, and IC_D_P represent the 
+extracted HIs associated with the height and position of the peaks in the CV 
+charge, CC charge, and CC discharge IC curves, respectively. Moreover, Figs.  10, 
+(3)ICCV−charging = dQ c
+dV c
+≈ ΔQ c
+ΔV c
+=
+ic2
+tc2
+− ic,1tc,1
+V c
+(4)ICdischarging = dQ d
+dV d
+≈ ΔQ d
+ΔV d
+= id Δt
+V d2
+− V d1
+ S. Mishra et al.
+1 3
+Fig. 7  IC curve in CC charge cycles
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+Fig. 8  IC curve in CC discharge cycles
+ S. Mishra et al.
+1 3
+Fig. 9  Sample screenshot of HIs
+Fig. 10  Cluster analysis for battery B005
+Fig. 11  Cluster analysis for battery B006
+Fig. 12  Cluster analysis for battery B007
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+11, 12, 13, and 14 include visual representations of both cluster analysis and 
+checkpoints, respectively [65– 67].
+We utilized the k-means clustering algorithm with K = 3 and employed the 
+ruptures library to implement novel Algorithm  1 for change point detection, 
+obtaining checkpoints for each battery dataset.
+The NASA AMES dataset lacks detailed information on battery degradation 
+patterns, making categorization challenging. However, noticeable capacity degra-
+dation occurs in lithium-ion batteries after a specific cycle point. As can be seen 
+from Fig.  4, the capacity degradation trend for the four battery datasets experi-
+ences various abnormal variations during its life cycle. Thus, we apply k-means 
+clustering to the dataset to explore the variable nature of capacity degradation 
+in operating settings such as temperature, voltage, and current. Using K = 3 for 
+three clusters, we illustrate the relationship of IC_CV_H with other indicators 
+(IC_C_P, IC_D_P, IC_D_H, capacity, and cycle) in Figs. 10, 11, 12, and 13.
+Clustering the data points reveals distinct cycle conditions within each sub-
+set of the dataset (B005, B006, B007, and B018) from the NASA AMES data-
+set. Additionally, regarding any lithium-ion battery degradation pattern, intuitive 
+analysis of capacity versus cycle suggests two significant change points where a 
+sharp drop in battery capacity occurs, resulting in the clustering of data points 
+into three distinct clusters [66, 67]. The k-means technique is used here to cluster 
+the training data into groups with comparable trajectories and a similarity index 
+as part of the direct analysis of the NASA AMES lithium-ion battery datasets.
+Similar to k-means clustering, identifying abrupt change points for capacity 
+degradation with the increasing number of cycles on lithium-ion battery data-
+sets ensures the identification of anomalous capacity points where a change in 
+capacity is significant. The rupture library is generally utilized to identify such 
+anomalous points [65]. However, only some points can be considered anomalous 
+for the battery degradation pattern. Thus, we designed Algorithm 1, which only 
+finds the points showing a considerable capacity change between any two cycles. 
+Furthermore, Algorithm 1 also considers checkpoints that denote abrupt changes 
+following smooth capacity degradation. Such changes could stem from diverse 
+charge–discharge processes influenced by fluctuating voltage, current, or a com-
+bination of both factors under varying operating settings.
+Algorithm 1  Detect abrupt changes.
+Fig. 13  Cluster analysis for battery B018
+ S. Mishra et al.
+1 3
+Fig. 14  Checkpoint analysis
+
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+4.4  Correlation analysis
+The correlation coefficient is a statistical metric quantifying the degree of a lin-
+ear association between two variables. It spans a scale from -1 to 1. A correla-
+tion coefficient of -1 signifies a strongly negative or inverse correlation, where 
+one series of values increases as the other decreases, and conversely. We have 
+performed a correlation analysis of battery capacity’s health indices. We aimed 
+to learn more about the relationships among these computed HIs and determine 
+their collective capacity to reflect changes in battery capacity. To achieve this, we 
+employed Pearson and Spearman correlation analyses to examine the interactions 
+between the HIs and battery capacity.
+• Pearson correlation analyses: It is mathematically expressed as follows: 
+ where /u1D70C is the correlation coefficient, n is the number of samples, X is the eigen-
+value, Y is the battery SOH, and ̄X and ̄Yare the corresponding average values. 
+The judgment method is that the larger the value of /uni007C.var/u1D70C/uni007C.var , the higher the degree of 
+correlation.
+• Spearman correlation analyses: It is mathematically expressed as follows: 
+(5)𝜌 =
+∑(X − ̄X)(Y − ̄Y)
+�∑(X − ̄X)2 ∑(Y − ̄Y)2
+ S. Mishra et al.
+1 3
+ Here, /u1D70C represents the Spearman’s rank correlation coefficient. The variable D i 
+is characterized as the disparity between the rankings of each observation, with n 
+representing the total count of observations.
+Tables 4 and 5  display the results of Pearson and Spearman correlation analyses 
+between the HIs and the battery’s capacity. The data reveal significant correlations, par-
+ticularly with health indicators IC_D_H and IC_D_P obtained from the discharge cycle 
+incremental capacity (IC) curve. This suggests that the health indicator derived from 
+the discharge cycle IC curve is a reliable indicator of capacity changes.
+Further examination of Tables 4 and 5 indicates that IC_CC_P exhibits a higher cor-
+relation with capacity than IC_CC_H, while IC_CV_H shows a stronger correlation 
+with capacity than IC_CV_P. Consequently, we selected two HIs from the charging 
+phases, specifically IC_CC_P and IC_CV_H. Moreover, the heatmaps illustrating the 
+Pearson and Spearman correlation analyses for each battery are presented in Figs. 15 
+and 16, visually representing the correlations among the HIs. Additionally, Fig.  17 
+illustrates the distribution of relationships between our discharge cycle HIs and capac-
+ity. This figure highlights a robust positive correlation with health indicators IC_D_H 
+and IC_D_P obtained from the discharge cycle IC curve and battery capacity.
+4.5  AutoML frameworks
+Recently, several AutoML systems, including H2O [68], AutoSklearn [69], AutoTS 
+[70], AutoGluon [71], TPOT [72, 73], AutoKeras [74], AutoPyTorch [75], and 
+(6)/u1D70C= 1 −
+6 ∑D 2
+i
+n(n2 − 1)
+Table 4  Pearson correlation analysis of each HIs with capacity
+Battery name (IC_CC_H) (IC_CC_P) (IC_D_H) (IC_D_P) (IC_CV_H) (IC_CV_P) Cycles
+B005 0.054 −0.44 0.3 0.48 −0.33 0.2 −0.99
+B006 0.05 −0.32 0.77 0.94 −0.58 0.58 −0.98
+B007 0.02 −0.019 0.34 0.72 −0.34 −0.02 −0.99
+B0018 0.34 −0.61 0.35 0.38 −0.031 −0.037 −0.99
+Table 5  Spearman correlation analysis of each HIs with capacity
+Battery name (IC_CC_H) (IC_CC_P) (IC_D_H) (IC_D_P) (IC_CV_H) (IC_CV_P) Cycles
+B005 −0.093 −0.51 0.88 0.83 −0.32 0.18 −0.99
+B006 0.07 −0.24 0.94 0.94 −0.44 0.05 −0.99
+B007 −0.24 −0.22 0.83 0.76 −0.36 0.06 −0.99
+B0018 0.59 −0.61 0.95 0.84 −0.04 −0.061 −0.99
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+others, have been proposed. These systems integrate model selection, hyperparam-
+eter optimization, and feature engineering. Our work employed AutoKeras [74], 
+TPOT [72, 73], H2O [68], and AutoTS [70] models for EV LIBs RUL prediction. 
+The following paragraphs provide a concise review and comparison of the AutoML 
+frameworks utilized in this paper.
+• H2O: H2O AutoML [68] is a fully automated supervised learning model embed-
+ded within the H2O library. It finds extensive application in academia and 
+various industries as an open-source, distributed, and scalable solution. H2O 
+AutoML supports various problem types, including binary classification, multi-
+class classification, and regression. One of its standout features is its ability to 
+generate predictions swiftly, with multiple H2O models capable of producing 
+results in minimal time. Moreover, H2O AutoML offers APIs in various pro-
+gramming languages, enhancing its accessibility and integration across diverse 
+fields. These advantages make it a versatile and widely utilized tool across 
+domains.
+Fig. 15  Pearson correlation matrix between the HIs
+ S. Mishra et al.
+1 3
+  H2O AutoML utilizes a variety of machine learning algorithms available 
+in the H2O ecosystem, including deep learning, gradient boosting machines, 
+random forests, and generalized linear models. The framework automates the 
+process of model selection and hyperparameter tuning by exploring the hyper -
+parameter space of each algorithm using techniques like grid search, random 
+search, and Bayesian optimization. It also employs ensemble learning meth-
+ods to combine predictions from multiple models, enhancing predictive accu-
+racy and robustness.
+   Users provide a dataset in its workflow, and AutoML handles data pre-
+processing tasks such as missing value imputation and feature scaling. It 
+then trains multiple models in parallel, evaluates their performance using 
+cross-validation techniques, and selects the best-performing models based 
+on evaluation metrics such as accuracy and AUC. Finally, users can deploy 
+the selected models for inference in production environments, facilitated by 
+H2O AutoML’s compatibility with various deployment formats. Overall, 
+H2O AutoML streamlines the end-to-end process of building and deploying 
+Fig. 16  Spearman correlation matrix between the HIs
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+Fig. 17  Relationship of (IC_D_H) and (IC_D_P) with the capacity of each battery
+ S. Mishra et al.
+1 3
+machine learning models, making it accessible and efficient for novice and 
+experienced data scientists.
+• TPOT [72, 73]: TPOT is an ML platform employing a genetic algorithm to 
+design and optimize pipelines automatically. It covers decision trees, random 
+forests, XGBoost, KNN, and logistic regression for model selection, along with 
+feature selection techniques like standard scaler, SelectKBest, randomized PCA, 
+and recursive feature elimination. The process involves generating and evaluat-
+ing 100 tree-based pipelines, choosing the topmost 20 in each generation, and 
+replicating and mutating them to create a new set of 100 pipelines. This repeats 
+100 times, yielding the best-performing models of the last generation.
+• AutoKeras: AutoKeras [74] is an AutoML model based on the Keras API. Unlike 
+other AutoML frameworks, AutoKeras prioritizes deep learning above more 
+basic models. It employs neural architecture search to systematically explore and 
+discover optimal neural network architectures for a given modeling task.
+• AutoTS: AutoTS [70] is a Python time series forecasting model designed for scal-
+able and accurate forecasting. It supports various models, including naive, statis-
+tical, machine learning, and deep learning, with over 30 time series transforms. 
+The package handles multi-variate and probabilistic forecasts, scaling efficiently 
+to large datasets.
+4.6  Training process
+Initially, we extracted the eight HIs using the IC curve and direct analysis. Sub-
+sequently, we employ an AutoML framework for training and testing with these 
+HIs to estimate RUL. We employed four AutoML models—AutoKeras, TPOT, 
+AutoTS, and H2O—for comparative purposes. The parameters for the used 
+AutoML models—AutoKeras, TPOT, AutoTS, and H2O—are presented in 
+Tables 6, 7, 8, and 9, respectively.
+The performance of the employed each of the models above is validated in 
+three distinct scenarios [21, 22] using six HIs (without cluster and checkpoint) 
+and eight HIs (with cluster and checkpoint) for showing the significance of clus-
+ter and checkpoint. The three distinct scenarios are as follows: 
+Table 6  List of parameters for 
+the AutoKeras model S. no. Parameters Values
+1 Loss Mean_squared_error
+2 Metrics None
+3 Project_name Structured_data_regressor
+4 Max_trials 10
+5 Objective Val_loss
+6 Epochs 200
+7 Validation split 0.1
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+ i. Case-1 (individual battery): We divided each battery’s HIs into training and 
+testing sets using an 80:20 ratio. Specifically, we employed the subsequent 
+training–test combinations:
+• Train with HIs of B 005; predict for B 005.
+• Train with HIs of B 006; predict for B 006.
+• Train with HIs of B 007; predict for B 007.
+• Train with HIs of B 018; predict for B 018.
+Table 7  List of parameters for 
+TPOT model S. no. Parameters Values
+1 Generations 3
+2 Population_size 20
+3 Verbosity 3
+4 Random_state 42
+5 Epochs 200
+6 Validation split 0.1
+Table 8  List of parameters for 
+the H2O model S. no. Parameters Values
+1 Max_runtime_secs 60
+2 H2O_cluster_uptime 06 secs
+3 H2O_cluster_version 3.44.0.2
+4 H2O_cluster_free_memory 3.170 Gb
+5 H2O_cluster_total_cores 2
+6 H2O_cluster_total_nodes 1
+7 H2O_cluster_allowed_cores 2
+8 Epochs 200
+9 Validation split 0.1
+Table 9  List of parameters for 
+the AutoTS model S. no. Parameters Values
+1 Prediction_interval 0.9
+2 Ensemble ‘auto’
+3 Transformer_list ‘default’
+4 Drop_most_recent 1
+5 Max_generations 3
+6 Num_validations 2
+7 Validation_method ‘backwards’
+8 Epochs 200
+9 Validation split 0.1
+ S. Mishra et al.
+1 3
+ ii. Case-2 (2P1): We used the HIs data from two batteries for training to predict 
+the capacity of another battery. Specifically, we employed the subsequent train-
+ing–test combinations:
+• Train with HIs of B005 and B006; predict for B007.
+• Train with HIs of B005 and B007; predict for B018.
+• Train with HIs of B007 and B006; predict for B005.
+• Train with HIs of B007 and B018; predict for B006.
+    Each combination allowed us to evaluate the model’s predictive performance 
+on a different target battery.
+ iii. Case-3 (leave-one-out): We used the HI data from three batteries for training 
+to predict the capacity of another battery. Specifically, we employed the subse-
+quent training–test combinations:
+• Train with HIs of B006, B007, and B018; predict for B005.
+• Train with HIs of B005, B007, and B018; predict for B006.
+• Train with HIs of B005, B006, and B018; predict for B007.
+• Train with HIs of B005, B006, and B007; predict for B018.
+5  Experimental results
+This section outlines the experimental setup, performance metrics, and analysis of 
+the results obtained from our experiments.
+5.1  Experimental platform
+All the AutoML models were implemented using Python 3.10.12 and Keras 2.13.1, 
+an open-source deep learning library built on TensorFlow 2.13.0. The experiments 
+were conducted on the Google Colab platform with an NVIDIA K80, a 12 GB GPU, 
+and a 2.5 GHz Intel (R) Xeon (R) processor with 256 GB of storage.
+5.2  Performance measures
+To measure the impact of the suggested AutoML model in EV battery RUL pre-
+diction, we use three widely used regression prediction indicators—the mean abso-
+lute error (MAE), the root-mean-square error (RMSE), and the R-square ( R2 ) as the 
+evaluation criteria of the methods. Details of these measures are provided below:
+• MAE: The mean absolute error quantifies the average absolute discrepancy 
+between predicted and actual values within a dataset. MAE is calculated as fol-
+lows: 
+(7)MAE (C a, ̂C p)= 1
+n
+n/uni2211.s1
+i=1
+/uni007C.x/uni007C.x/uni007C.x̂C p − C a
+/uni007C.x/uni007C.x/uni007C.x
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+ Here, ̂Cp represents the predicted capacity value, and Ca signifies the actual 
+capacity value. The lower the MAE, the more precise the prediction.
+• RMSE: It measures the average deviation between a model’s predicted values 
+and those found in a dataset. The procedure for calculating RMSE is as follows: 
+ Here, ̂Cp represents the predicted capacity value, and Ca signifies the actual 
+capacity value. The lower the RMSE, the more precise the prediction.
+• R-square ( R2 ): This measurement is commonly called the coefficient of deter -
+mination, indicating how effectively a model aligns with the data. It is a statisti-
+cal metric that measures the degree to which the regression line aligns with the 
+actual data points within the context of regression analysis. The calculation for 
+R2 is as follows: 
+ where ̂Cp denotes the predicted value of capacity, and Ca denotes the actual value 
+of capacity. R2 has a value between 0 and 1. The closer it is to one, the higher the 
+model’s performance.
+5.3  Result analysis
+In this section, we present the outcomes generated by AutoML models, assessing 
+their efficacy using MAE and RMSE metrics across various battery datasets. Our 
+analysis covers three distinct training scenarios labeled Case-1, Case-2, and Case-
+3, capturing scenarios with and without considerations for cluster and checkpoint-
+based HIs. We also provide a comparative analysis of our AutoML models based on 
+recent related works.
+5.3.1  Results in Case‑1:
+The outcomes for Case-1, considering the inclusion and exclusion of clustering and 
+checkpoint analyses, are detailed in Tables  10 and 11. Each battery’s health indi-
+ces underwent an 80:20 split into training and testing sets for the experimental 
+setup. Examining Table  10, it is apparent that the H2O model excelled in battery 
+B018, achieving low MAE and RMSE values of 0.0093 and 0.0130, respectively. 
+The AutoTS model demonstrated remarkable performance for batteries B006 and 
+B007, boasting notably low MAE and RMSE values at 0.0063 and 0.0044, as well 
+as 0.0044 and 0.0099, surpassing the efficacy of other presented models. Addition-
+ally, the AutoTS model showcased superior MAE results for battery B005 compared 
+to all other AutoML models.
+(8)RMSE (Ca, ̂Cp)=
+/uni221A.t/uni221A.x/uni221A.x/uni221A.s41
+N
+N/uni2211.s1
+i=1
+(Ca − ̂Cp)2
+(9)R2 (Ca, ̂Cp )= 1 −
+∑N
+i=1(Ca − ̂Cp )2
+∑N
+i=1( ̄Ca − ̂Cp )2
+ S. Mishra et al.
+1 3
+Additionally, to enrich the understanding of the AutoML model’s effectiveness 
+in predicting RUL, bar charts illustrating errors from Tables  10 and 11 for the 
+test data are presented in Figs.  18 and 19. These visualizations offer additional 
+insights into the model’s performance across various batteries, emphasizing its 
+predictive capabilities.
+5.3.2  Results in Case‑2:
+In Case-2 (2P1), we employed HIs data from two batteries for training, aiming to 
+predict the capacity of another battery. The results for Case-2, considering both 
+the inclusion and exclusion of clustering and checkpoint analyses, are elaborated 
+in Tables  12 and 13. Tables  12 and 13 indicate that, among the various models, 
+the H2O model performed exceptionally well in both scenarios, i.e., achieving 
+low MAE and RMSE values. Notably, the H2O model, with and without clus-
+tering and checkpoint analyses, exhibited comparable performance in the 2P1 
+strategy.
+Additionally, to enrich the understanding of the AutoML model’s effectiveness 
+in predicting RUL in the 2P1 Case, bar charts illustrating errors from Tables  12 
+and 13 for the test data are presented in Figs.  20 and 21. These visualizations 
+offer additional insights into the model’s performance across various batteries, 
+emphasizing its predictive capabilities.
+Table 10  Comparative analysis of the AutoML models with cluster and checkpoint in individual battery 
+strategies
+Batteries AutoKeras TPOT H2O AutoTS
+MAE RMSE MAE RMSE MAE RMSE MAE RMSE
+B005 0.0564 0.0610 0.0169 0.0207 0.0097 0.0127 0.0037 0.0203
+B006 0.0383 0.0559 0.0204 0.0301 0.0258 0.0323 0.0063 0.0259
+B007 0.0493 0.0664 0.0115 0.0139 0.0093 0.0109 0.0044 0.0099
+B018 0.1327 0.1783 0.0153 0.0206 0.0093 0.0130 0.0267 0.0229
+Table 11  Comparative analysis of the AutoML models without cluster and checkpoint in individual bat-
+tery strategies
+Batteries AutoKeras TPOT H2O AutoTS
+MAE RMSE MAE RMSE MAE RMSE MAE RMSE
+B005 0.0634 0.0723 0.0140 0.0173 0.0107 0.0141 0.0030 0.0248
+B006 0.0324 0.0435 0.0206 0.0309 0.0115 0.0154 0.0052 0.0229
+B007 0.0675 0.0801 0.0111 0.0143 0.0084 0.0100 0.0037 0.0124
+B018 0.0817 0.1025 0.0147 0.0193 0.0128 0.0172 0.0320 0.0472
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+5.3.3  Results in Case‑3:
+In Case-3 (leave-one-out), we employed HI data from three batteries for training 
+to forecast the capacity of another battery. The results for Case-3, considering both 
+Fig. 18  MAE values for each AutoML model in Case-1
+ S. Mishra et al.
+1 3
+the inclusion and exclusion of clustering and checkpoint analyses, are elaborated in 
+Tables 14 and 15. Tables 14 and 15 indicate that, among the various models in both 
+scenarios, the H2O model performed exceptionally well, achieving low MAE and 
+RMSE values. Notably, the H2O model, with and without clustering and checkpoint 
+analyses, exhibited comparable performance in Case-3.
+Fig. 19  RMSE values for each AutoML model in Case-1
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+Additionally, to enrich the understanding of the AutoML model’s effectiveness 
+in predicting RUL in Case-3, bar charts illustrating errors from Tables 14 and 15 for 
+the test data are presented in Figs.  22 and 23. These visualizations offer additional 
+insights into the model’s performance across various batteries, emphasizing its pre-
+dictive capabilities.
+5.3.4  Comparative results with related works
+We conducted a comparative analysis of our models against relevant existing meth-
+ods, as outlined below:
+• RNN [18]: In this work, with multiple recurrent neural network (RNN) units, the 
+primary aim is to predict RUL.
+• SVM [76]: In this, the SVM model is used to predict the RUL of LIBs.
+• GRU [20]: This work incorporates a GRU unit for learning and capturing the 
+degradation trend from the input sequence.
+• ADNN [77]: In this work, the Autoencoder-DNN (ADNN) model is employed 
+for predicting the RUL of LIBs. This data-driven approach integrates an autoen-
+coder with a deep neural network (DNN) to effectively capture and utilize latent 
+features for RUL estimation.
+• Dual-LSTM [19]: In this work, employing two distinct LSTM cell types enables 
+the capture of nonlinearity in the relationship between capacities.
+Table 12  Comparative analysis of the AutoML models with cluster and checkpoint in the 2P1 strategy
+Batteries AutoKeras TPOT H2O AutoTS
+MAE RMSE MAE RMSE MAE RMSE MAE RMSE
+B005 0.1770 0.2269 0.0766 0.0946 0.0107 0.0129 0.0112 0.0150
+B006 0.2079 0.2571 0.0608 0.0803 0.0083 0.0106 0.0084 0.0525
+B007 0.0768 0.0940 0.0804 0.0986 0.0169 0.0225 0.0168 0.1658
+B018 0.1353 0.1563 0.0730 0.0914 0.0113 0.0146 0.0179 0.1766
+AVG 0.1493 0.1836 0.0727 0.0913 0.0118 0.0152 0.0136 0.1025
+Table 13  Comparative analysis of the AutoML models without clusters and checkpoints in 2P1 strategy
+Batteries AutoKeras TPOT H2O AutoTS
+MAE RMSE MAE RMSE MAE RMSE MAE RMSE
+B005 0.0830 0.1336 0.0763 0.0944 0.0116 0.0161 0.0166 0.0266
+B006 0.1615 0.1831 0.0837 0.1009 0.0112 0.0162 0.0179 0.0507
+B007 0.0645 0.0766 0.0797 0.0936 0.0106 0.0124 0.0166 0.2306
+B018 0.0578 0.0739 0.0663 0.0852 0.0134 0.0174 0.0135 0.1763
+AVG 0.0917 0.1168 0.0765 0.0935 0.0117 0.0155 0.0162 0.1210
+ S. Mishra et al.
+1 3
+• MLP [17]: In this study, the utilization of multiple fully connected layers serves 
+as a means to effectively capture the dynamic and nonlinear degradation trends 
+in battery performance.
+Fig. 20  MAE values for each AutoML model in Case-2
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+• Auto-CNN-LSTM [78]: In this paper, the authors propose a novel method for 
+predicting the RUL of LIBs using an enhanced convolutional neural network 
+(CNN) and LSTM architecture named Auto-CNN-LSTM. This approach lev -
+Fig. 21  RMSE values for each AutoML model in Case-2
+ S. Mishra et al.
+1 3
+erages deep CNN and LSTM networks to extract profound insights from lim-
+ited data.
+• LSTM [8]: This work incorporates multiple Long Short-Term Memory (LSTM) 
+units. The intention is to leverage their capabilities in learning and capturing the 
+degradation trend of LIBs.
+• DeTransformer [21]: In this research, a denoising autoencoder was employed to 
+extract meaningful representations from corrupted battery charge and discharge 
+data. Subsequently, these representations were utilized to reconstruct the original 
+input. Following this, Transformer networks were applied to predict the RUL of 
+the LIBs.
+• AutoML22 [30]: In this work, three HIs are extracted during the constant cur -
+rent–constant voltage (CC–CV) charging phase. These HIs are then employed as 
+inputs for an AutoML prediction model utilized for the RUL prediction of LIBs.
+To assess the efficacy of the suggested optimal AutoML model, H2O, with the 
+incorporation of clustering and checkpoint analysis, we conducted a compara-
+tive analysis using the leave-one-out approach, consistent with the methodology 
+employed in recent research [30]. The outcomes of our comparative analysis are 
+outlined in Table  16 and visually depicted in the bar chart illustrated in Fig.  24 
+(Notably, due to the availability of only RMSE values, SVM [76], ADNN [77], 
+and Auto-CNN-LSTM [78] were excluded from the bar chart comparison). It is 
+Table 14  Comparative analysis of the AutoML models with cluster and checkpoint in leave-one-out 
+strategy
+Batteries AutoKeras TPOT H2O AutoTS
+MAE RMSE MAE RMSE MAE RMSE MAE RMSE
+B005 0.0716 0.0913 0.0611 0.0820 0.0139 0.0194 0.0038 0.0195
+B006 0.1293 0.1626 0.0923 0.1045 0.0141 0.0208 0.0149 0.1042
+B007 0.1141 0.1309 0.0815 0.1014 0.0169 0.0245 0.0227 0.1355
+B018 0.2148 0.2514 0.1055 0.1382 0.0101 0.0135 0.0160 0.2309
+AVG 0.1325 0.1591 0.0851 0.1065 0.0138 0.0196 0.0144 0.1225
+Table 15  Comparative analysis of the AutoML models without clusters and checkpoints in leave-one-out 
+strategy
+Batteries AutoKeras TPOT H2O AutoTS
+MAE RMSE MAE RMSE MAE RMSE MAE RMSE
+B005 0.0821 0.0999 0.0621 0.0833 0.0154 0.0201 0.0124 0.3008
+B006 0.1193 0.1682 0.0694 0.0795 0.0128 0.0187 0.0176 0.0641
+B007 0.0649 0.0894 0.0898 0.1077 0.0162 0.0215 0.0154 0.2760
+B018 0.0790 0.1032 0.0926 0.1100 0.0125 0.0168 0.0208 0.2166
+AVG 0.0863 0.1152 0.0785 0.0951 0.0142 0.0193 0.0166 0.2144
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+evident from both Table  16 and Fig.  24 that our innovative approach surpasses all 
+other cited methodologies regarding both MAE and RMSE performance metrics.
+Fig. 22  MAE values for each AutoML model in Case-3
+ S. Mishra et al.
+1 3
+In our final assessment, we evaluated our proposed model against the recent 
+AutoML-based model detailed in [30] for Case-1, presented in Table  17. Fig-
+ure 25 provides a comprehensive summary and visualization of this comparison, 
+Fig. 23  RMSE values for each AutoML model in Case-3
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+illustrating cumulative RMSE and MAE. As per Fig.  25, for Case-1, our model 
+demonstrates superior performance (low cumulative RMSE and MAE) for batter -
+ies B005, B007, and B018 while delivering comparable results for battery B006.
+Table 16  Comparative analysis 
+of the proposed work with 
+related works in the leave-one-
+out strategy
+Methods MAE RMSE
+RNN [18] 0.0749 0.0848
+SVM [76] − 0.3766
+GRU [20] 0.0806 0.0921
+ADNN [77] − 0.0666
+Dual-LSTM [19] 0.0815 0.0879
+MLP [17] 0.1379 0.1541
+Auto-CNN-LSTM [78] − 0.0484
+LSTM [8] 0.0829 0.0905
+DeTransformer [21] 0.0713 0.0802
+AutoML22 [30] 0.0336 0.0414
+Proposed (H2O+HIs) 0.0138 0.0196
+Fig. 24  A bar chart compares the proposed work with related work in the leave-one-out strategy
+Table 17  Comparative analysis 
+of the proposed work with 
+AutoML22 [30] for individual 
+batteries
+Batteries Proposed work AutoML22 [30]
+MAE RMSE MAE RMSE
+B005 0.0097 0.0127 0.0283 0.0337
+B006 0.0258 0.0323 0.0221 0.0340
+B007 0.0093 0.0109 0.0361 0.0407
+B018 0.0093 0.0130 0.0479 0.0573
+ S. Mishra et al.
+1 3
+As a result of our proposed model, we achieve superior performance in predict-
+ing RUL for lithium-ion batteries in electric vehicles compared to relevant existing 
+studies [8, 17–21, 76–78]. Additionally, our model outperforms the latest research 
+presented in AutoML22 [30]. Notably, our work demonstrates a lower MAE of 
+58.93 % [(0.0336 − 0.0138)÷( 0.0336)× 100] and a reduced RMSE of 52.66 % 
+[(0.0414 − 0.0196)÷( 0.0414)× 100] when compared to the findings in [30].
+5.4  Discussion
+The result analysis discussed above highlights the superior performance of the H2O 
+AutoML model compared to existing models [8, 17–21, 30, 76–78], as well as the 
+AutoML models employed in this paper, namely AutoKeras [74], TPOT [72, 73], 
+and AutoTS [70], for predicting RUL in EV LIBs.
+In this subsection, we analyze and compare the predictive performance of the 
+H2O model in estimating RUL. The evaluation considers scenarios with and without 
+checkpoints and cluster HIs across the three cases. Tables 18, 19, and 20 present the 
+performance measures under both conditions across the three cases.
+From Tables 18, 19, and 20, it becomes evident that in Cases-1 and 3, H2O mod-
+els utilizing cluster and checkpoint HIs perform well for batteries B005 and B018, 
+whereas the H2O model without using cluster and checkpoint HIs performs bet-
+ter for B006 and B007. Furthermore, in Case-2, the MAE for all batteries is lower 
+with H2O models without cluster and checkpoint HIs; however, the RMSE is lower, 
+and the R-square is close to 1 with H2O models using cluster and checkpoint HIs. 
+Fig. 25  A bar chart showing comparative analysis of the proposed work with AutoML22 [30] for indi-
+vidual batteries
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+Additionally, concerning the R-square score, the H2O models utilizing cluster and 
+checkpoint HIs are more suitable.
+6  Conclusion
+Amid concerns about depleting fossil fuel reserves and rising air pollution, the 
+growing demand for electric vehicles highlights the critical need to accurately 
+forecast the remaining life span of lithium-ion batteries to achieve widespread 
+commercial EV adoption. The data-driven approach, powered by efficient 
+machine learning and deep learning models, has recently gained popularity in 
+this field. However, challenges such as manual model selection, hyperparameter 
+Table 18  Comparative analysis 
+of the H2O model: without vs. 
+with cluster and checkpoint HIs 
+in Case-1
+H2O without cluster and 
+checkpoint HIs
+H2O with cluster and 
+checkpoint HIs
+MAE RMSE R2 MAE RMSE R2
+B005 0.0107 0.0141 0.9906 0.0097 0.0127 0.9947
+B006 0.0115 0.0154 0.9966 0.0258 0.0323 0.9840
+B007 0.0084 0.0100 0.9968 0.0093 0.0109 0.9935
+B018 0.0128 0.0172 0.9813 0.0093 0.0130 0.9934
+Table 19  Comparative analysis 
+of H2O model: without vs. with 
+cluster and checkpoint HIs in 
+Case-2
+H2O without cluster and 
+checkpoint HIs
+H2O with cluster and 
+checkpoint HIs
+MAE RMSE R2 MAE RMSE R2
+B005 0.0116 0.0161 0.9911 0.0766 0.0129 0.9944
+B006 0.0112 0.0162 0.9910 0.0608 0.0106 0.9965
+B007 0.0106 0.0124 0.9966 0.0804 0.0225 0.9933
+B018 0.0134 0.0174 0.9933 0.0730 0.0146 0.9959
+AVG 0.0117 0.0155 0.9930 0.0118 0.0152 0.9951
+Table 20  Comparative analysis 
+of H2O model: without vs. with 
+cluster and checkpoint HIs in 
+Case-3
+H2O without cluster and 
+checkpoint HIs
+H2O with cluster and 
+checkpoint HIs
+MAE RMSE R2 MAE RMSE R2
+B005 0.0154 0.0201 0.9888 0.0139 0.0194 0.9910
+B006 0.0128 0.0187 0.9883 0.0141 0.0208 0.9845
+B007 0.0162 0.0215 0.9848 0.0169 0.0245 0.9864
+B018 0.0125 0.0168 0.9938 0.0101 0.0135 0.9963
+AVG 0.0142 0.0193 0.9889 0.0138 0.0196 0.9896
+ S. Mishra et al.
+1 3
+tuning, slow training speeds, and limited effectiveness with small-scale data still 
+need to be addressed. To address these challenges, we have proposed an AutoML-
+based approach that uses four AutoML frameworks—AutoKeras, TPOT, H2O, 
+and AutoTS on the NASA AMES Prognostics Center lithium-ion battery aging 
+dataset. We examined specific batteries (B005, B006, B007, and B0018) and 
+identified novel health indicators using incremental capacity analysis and direct 
+analysis techniques. These indicators, such as CC charging position (IC_CC_P), 
+CV charging peak (IC_CV_ H), and CC discharging peak/position (IC_D_H, 
+IC_D_P), capacity, cycle, cluster, and checkpoint, were selected based on Pearson 
+and Spearman correlation analyses to characterize battery aging. Furthermore, 
+a comparative evaluation of the proposed innovative HIs-based AutoML model 
+(H2O) on NASA’s LIBs battery dataset demonstrates superior performance 
+across individual batteries, 2P1, and leave-one-out scenarios. The proposed meth-
+ods outperform recent AutoML-based research, with a 58.93 % lower MAE and 
+52.66 % lower RMSE.
+Our next objective is to advance this research by determining model param-
+eters for dynamic driving scenarios. We will validate our proposed model by sim-
+ulating typical urban driving conditions, utilizing dynamic profiles such as the 
+Urban Dynamometer Driving Schedule (UDDS). This will enable us to refine our 
+predictions further and ensure the reliability of electric vehicles under real-world 
+usage scenarios.
+Author Contributions The collaborative efforts of the authors were as follows: Shivendu Mishra con-
+tributed to the conceptualization and implementation methodology and was responsible for writing the 
+original draft. Anurag Choubey was key in conceptualizing, implementing, and meticulously revising 
+the manuscript. Bollampalli Areen Reddy primarily focused on designing and implementing parts of 
+the manuscript. Rajiv Misra provided valuable input through validation, supervision, and further refine-
+ment of the manuscript. Each author’s commitment and involvement have been substantial, collectively 
+assuming public responsibility for different facets of the content. Importantly, all authors have rigorously 
+reviewed and approved the final manuscript.
+Funding This work did not receive financial support.
+Availability of data and materials The data and materials are available within the manuscript.
+Code Availability Not applicable.
+Declarations 
+ Conflict of interest The authors declare that there is no conflict of interest regarding the publication of 
+this paper.
+Ethics approval Not applicable.
+Consent to participate All the authors declare their consent to participate in this research article.
+Consent for publication All the authors declare their consent for publication of the article on acceptance.
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+References
+ 1. Man-Fai N, Zhao J, Qingyu Y, Conduit GJ, Wei SZ (2020) Predicting the state of charge and health 
+of batteries using data-driven machine learning. Nature Mach Intell 2(3):161–170
+ 2. Mitova S, Henao A, Kahsar R, Farmer CJ et al (2022) Smart charging for electric ride-hailing vehi-
+cles using renewables: a San Francisco case study. Int J Sustain Energy Environ Res 11(2):67–85
+ 3. Dwijendra NKA, Sharma S, Asary AR, Ali M, Muda I, Mutlak DA, Parra RMR, Hammid AT 
+(2022) Economic performance of a hybrid renewable energy system with optimal design of 
+resources. Rigas Tehniskas Universitates Zinatniskie Raksti 26(1):441–453
+ 4. Harper G, Sommerville R, Kendrick E, Driscoll L, Slater P, Stolkin R, Walton A, Christensen P, 
+Heidrich O, Lambert S et al (2019) Recycling lithium-ion batteries from electric vehicles. Nature 
+575(7781):75–86
+ 5. Goli A, Golmohammadi A-M, Verdegay J-L (2022) Two-echelon electric vehicle routing problem 
+with a developed moth-flame meta-heuristic algorithm. Oper Manag Res 15(3–4):891–912
+ 6. Feng F, Teng S, Liu K, Xie J, Xie Y, Liu B, Li K (2020) Co-estimation of lithium-ion battery state 
+of charge and state of temperature based on a hybrid electrochemical-thermal-neural-network 
+model. J Power Sources 455:227935
+ 7. Zhou L, Zhao Y, Li D, Wang Z (2021) State-of-health estimation for lifepo 4 battery system on real-
+world electric vehicles considering aging stage. IEEE Trans Transp Electr 8(2):1724–1733
+ 8. Li G, Chen H, Zhang B, Guo H, Chen S, Chang X, Wu X, Zheng J, Li X (2022) Interfacial covalent 
+bonding enables transition metal phosphide superior lithium storage performance. Appl Surf Sci 
+582:152404
+ 9. Lai X, Chen Q, Tang X, Zhou Y, Gao F, Guo Y, Bhagat R, Zheng Y (2022) Critical review of life 
+cycle assessment of lithium-ion batteries for electric vehicles: A lifespan perspective. Etransporta-
+tion 12:100169
+ 10. Roman D, Saxena S, Robu V, Pecht M, Flynn D (2021) Machine learning pipeline for battery state-
+of-health estimation. Nature Mach Intell 3(5):447–456
+ 11. Li Y, Liu K, Foley AM, Zülke A, Berecibar M, Nanini-Maury E, Van Mierlo J, Hoster HE (2019) 
+Data-driven health estimation and lifetime prediction of lithium-ion batteries: a review. Renew Sus-
+tain Energy Rev 113:109254
+ 12. Xu X, Chen N (2017) A state-space-based prognostics model for lithium-ion battery degradation. 
+Reliab Eng Syst Saf 159:47–57
+ 13. Liao Z, Gai N, Stansby P, Li G (2019) Linear non-causal optimal control of an attenuator type wave 
+energy converter m4. IEEE Trans Sustain Energy 11(3):1278–1286
+ 14. Wang L, Zhou D, Zhang H, Zhang W, Chen J (2018) Application of relative entropy and gradient 
+boosting decision tree to fault prognosis in electronic circuits. Symmetry 10(10):495
+ 15. Meng J, Cai L, Stroe D-I, Huang X, Peng J, Liu T, Teodorescu R (2021) An automatic weak 
+learner formulation for lithium-ion battery state of health estimation. IEEE Trans Industr Electron 
+69(3):2659–2668
+ 16. Yang F, Wang D, Xu F, Huang Z, Tsui K-L (2020) Lifespan prediction of lithium-ion batteries 
+based on various extracted features and gradient boosting regression tree model. J Power Sources 
+476:228654
+ 17. Wu Y, Li W, Wang Y, Zhang K (2019) Remaining useful life prediction of lithium-ion batteries 
+using neural network and bat-based particle filter. IEEE access 7:54843–54854
+ 18. Liu J, Saxena A, Goebel K, Saha B, Wang W (2010) An adaptive recurrent neural network for 
+remaining useful life prediction of lithium-ion batteries. In: Annual Conference of the PHM Society, 
+vol. 2
+ 19. Xiao B, Liu Y, Xiao B (2019) Accurate state-of-charge estimation approach for lithium-ion batteries 
+by gated recurrent unit with ensemble optimizer. IEEE Access 7:54192–54202
+ 20. Zhang Y, Xiong R, He H, Pecht MG (2018) Long short-term memory recurrent neural network for 
+remaining useful life prediction of lithium-ion batteries. IEEE Trans Veh Technol 67(7):5695–5705
+ 21. Chen D, Hong W, Zhou X (2022) Transformer network for remaining useful life prediction of lith-
+ium-ion batteries. Ieee Access 10:19621–19628
+ 22. Ansari S, Ayob A, Hossain Lipu MS, Hussain A, Saad MHM (2021) Multi-channel profile based 
+artificial neural network approach for remaining useful life prediction of electric vehicle lithium-ion 
+batteries. Energies 14(22):7521
+ S. Mishra et al.
+1 3
+ 23. Wang J, Liu S, Wang S, Liu Q, Liu H, Zhou H, Tang J (2021) Multiple indicators-based health diag-
+nostics and prognostics for energy storage technologies using fuzzy comprehensive evaluation and 
+improved multivariate grey model. IEEE Trans Power Electron 36(11):12309–12320
+ 24. Wang Y, Ni Y, Lu S, Wang J, Zhang X (2019) Remaining useful life prediction of lithium-ion bat-
+teries using support vector regression optimized by artificial bee colony. IEEE Trans Veh Technol 
+68(10):9543–9553
+ 25. Zhang Y, Xiong R, He H, Pecht MG (2018) Lithium-ion battery remaining useful life predic-
+tion with Box-Cox transformation and Monte Carlo simulation. IEEE Trans Industr Electron 
+66(2):1585–1597
+ 26. Li W, Jiao Z, Du L, Fan W, Zhu Y (2019) An indirect RUL prognosis for lithium-ion battery under 
+vibration stress using Elman neural network. Int J Hydrogen Energy 44(23):12270–12276
+ 27. Liu W, Xu Y (2020) Data-driven online health estimation of Li-ion batteries using a novel energy-
+based health indicator. IEEE Trans Energy Convers 35(3):1715–1718
+ 28. Liu H, Xiao Q, Jin Y, Mu Y, Meng J, Zhang T, Jia H, Teodorescu R (2022) Improved LightGBM-
+based framework for electric vehicle lithium-ion battery remaining useful life prediction using multi 
+health indicators. Symmetry 14(8):1584
+ 29. Xiao D, Su J (2022) Research on stock price time series prediction based on deep learning and 
+autoregressive integrated moving average. Sci Program. https:// doi. org/ 10. 1155/ 2022/ 47586 98
+ 30. Luo C, Zhang Z, Qiao D, Lai X, Li Y, Wang S (2022) Life prediction under charging process of 
+lithium-ion batteries based on AutoML. Energies 15(13):4594
+ 31. Yao Q, Wang M, Chen Y, Dai W, Li Y-F, Tu W-W, Yang Q, Yu Y (2018) Taking human out of 
+learning applications: a survey on automated machine learning. arXiv preprint arXiv: 1810. 13306
+ 32. Zhang Z, Wang S, Lin N, Wang Z, Liu P (2023) State of health estimation of lithium-ion batteries in 
+electric vehicles based on regional capacity and LGBM. Sustainability 15(3):2052
+ 33. Zhu C, Gao M, He Z, Wu H, Sun C, Zhang Z, Bao Z (2023) State of health prediction for Li-ion 
+batteries with end-to-end deep learning. J Energy Storage 65:107218
+ 34. Feng J, Cai F, Li H, Huang K, Yin H (2023) A data-driven prediction model for the remaining use-
+ful life prediction of lithium-ion batteries. Process Saf Environ Prot 180:601–615
+ 35. Richardson RR, Osborne MA, Howey DA (2017) Gaussian process regression for forecasting bat-
+tery state of health. J Power Sources 357:209–219
+ 36. Yun Z, Qin W, Shi W, Ping P (2020) State-of-health prediction for lithium-ion batteries based on a 
+novel hybrid approach. Energies 13(18):4858
+ 37. Zhang S, Zhai B, Guo X, Wang K, Peng N, Zhang X (2019) Synchronous estimation of state of 
+health and remaining useful lifetime for lithium-ion battery using the incremental capacity and arti-
+ficial neural networks. J Energy Storage 26:100951
+ 38. Sun T, Wang S, Jiang S, Xu B, Han X, Lai X, Zheng Y (2022) A cloud-edge collaborative strategy 
+for capacity prognostic of lithium-ion batteries based on dynamic weight allocation and machine 
+learning. Energy 239:122185
+ 39. Dong D, Li X-Y, Sun F-Q (2017) Life prediction of jet engines based on LSTM-recurrent neural net-
+works. In: 2017 Prognostics and System Health Management Conference (PHM-Harbin), pp. 1–6. 
+IEEE
+ 40. Zraibi B, Okar C, Chaoui H, Mansouri M (2021) Remaining useful life assessment for lithium-ion 
+batteries using CNN-LSTM-DNN hybrid method. IEEE Trans Veh Technol 70(5):4252–4261
+ 41. Wang F-K, Amogne ZE, Tseng C, Chou J-H (2022) A hybrid method for online cycle life prediction 
+of lithium-ion batteries. Int J Energy Res 46(7):9080–9096
+ 42. Tang T, Yuan H (2022) A hybrid approach based on decomposition algorithm and neural network 
+for remaining useful life prediction of lithium-ion battery. Reliab Eng Syst Saf 217:108082
+ 43. Ansari S, Ayob A, Hossain Lipu MS, Hussain A, Saad MHM (2021) Data-driven remaining useful 
+life prediction for lithium-ion batteries using multi-charging profile framework: a recurrent neural 
+network approach. Sustainability 13(23):13333
+ 44. Jia B, Guan Y, Wu L (2019) A state of health estimation framework for lithium-ion batteries using 
+transfer components analysis. Energies 12(13):2524
+ 45. Ji D, Wei Z, Tian C, Cai H, Zhao J (2022) Deep transfer ensemble learning-based diagnostic of 
+lithium-ion battery. IEEE/CAA J Autom Sinica. https:// doi. org/ 10. 1109/ JAS. 2022. 106001
+ 46. Alsharef A, Kumar K, Iwendi C (2022) Time series data modeling using advanced machine learning 
+and AutoML. Sustainability 14(22):15292
+ 47. Drori I, Liu L, Nian Y, Koorathota SC, Li JS, Moretti AK, Freire J, Udell M (2019) Automl using 
+metadata language embeddings. arXiv preprint arXiv: 1910. 03698
+1 3
+Enhancing EV lithium‑ion battery management: automated machine…
+ 48. Paldino GM, De Stefani J, De Caro F, Bontempi G (2021) Does AutoML outperform Naive fore-
+casting? Eng Proc 5(1):36
+ 49. Gomathi S, Kohli R, Soni M, Dhiman G, Nair R (2020) Pattern analysis: predicting Covid-19 pan-
+demic in India using AutoML. World J Eng 19(1):21–28
+ 50. Galanopoulos A, Ayala-Romero JA, Leith DJ, Iosifidis G (2021) Automl for video analytics with 
+edge computing. In: IEEE INFOCOM 2021-IEEE Conference on Computer Communications, pp. 
+1–10. IEEE
+ 51. Zeng Y, Zhang J (2020) A machine learning model for detecting invasive ductal carcinoma with 
+google cloud AutoML vision. Comput Biol Med 122:103861
+ 52. Luo C, Zhang Z, Qiao D, Lai X, Li Y, Wang S (2022) Life prediction under charging process of 
+lithium-ion batteries based on AutoML. Energies 15(13):4594
+ 53. Tang X, Zou C, Yao K, Chen G, Liu B, He Z, Gao F (2018) A fast estimation algorithm for lithium-
+ion battery state of health. J Power Sources 396:453–458
+ 54. Li Y, Abdel-Monem M, Gopalakrishnan R, Berecibar M, Nanini-Maury E, Omar N, Bossche P, Van 
+Mierlo J (2018) A quick on-line state of health estimation method for Li-ion battery with incremen-
+tal capacity curves processed by gaussian filter. J Power Sources 373:40–53
+ 55. Park K, Choi Y, Choi WJ, Ryu H-Y, Kim H (2020) LSTM-based battery remaining useful life pre-
+diction with multi-channel charging profiles. IEEE Access 8:20786–20798
+ 56. Hu Y-J, Huang S-W (2017) Challenges of automated machine learning on causal impact analytics 
+for policy evaluation. In: 2017 2nd International Conference on Telecommunication and Networks 
+(TEL-NET), pp. 1–6. IEEE
+ 57. Feurer M, Eggensperger K, Falkner S, Lindauer M, Hutter F (2018) Practical automated machine 
+learning for the automl challenge 2018. In: International Workshop on Automatic Machine Learning 
+at ICML, pp. 1189–1232
+ 58. Mohr F, Wever M, Hüllermeier E (2018) Ml-plan: automated machine learning via hierarchical 
+planning. Mach Learn 107:1495–1515
+ 59. He X, Zhao K, Chu X (2021) AutoML: a survey of the state-of-the-art. Knowl-Based Syst 
+212:106622
+ 60. Waring J, Lindvall C, Umeton R (2020) Automated machine learning: review of the state-of-the-art 
+and opportunities for healthcare. Artif Intell Med 104:101822
+ 61. Yu T, Zhu H (2020) Hyper-parameter optimization: a review of algorithms and applications. arXiv 
+preprint arXiv: 2003. 05689
+ 62. Goebel K, Saha B, Saxena A, Celaya JR, Christophersen JP (2008) Prognostics in battery health 
+management. IEEE Instrum Meas Mag 11(4):33–40
+ 63. Feng X, Li J, Ouyang M, Lu L, Li J, He X (2013) Using probability density function to evaluate the 
+state of health of lithium-ion batteries. J Power Sources 232:209–218
+ 64. Weng C, Sun J, Peng H (2014) A unified open-circuit-voltage model of lithium-ion batteries for 
+state-of-charge estimation and state-of-health monitoring. J Power Sources 258:228–237
+ 65. Truong C, Oudre L, Vayatis N (2020) Selective review of offline change point detection methods. 
+Signal Process 167:107299
+ 66. Singh J, Darpe A, Singh SP (2020) Bearing remaining useful life estimation using an adaptive data-
+driven model based on health state change point identification and k-means clustering. Meas Sci 
+Technol 31(8):085601
+ 67. Behera S, Choubey A, Kanani CS, Patel YS, Misra R, Sillitti A (2019) Ensemble trees learning 
+based improved predictive maintenance using iiot for turbofan engines. In: Proceedings of the 34th 
+ACM/SIGAPP Symposium on Applied Computing, pp. 842–850
+ 68. LeDell E, Poirier S (2020) H2o automl: Scalable automatic machine learning. In: Proceedings of the 
+AutoML Workshop at ICML, vol. 2020. ICML
+ 69. Feurer M, Klein A, Eggensperger K, Springenberg JT, Blum M, Hutter F (2015) Efficient and robust 
+automated machine learning. Adv Neural Inf Process Syst 28:2962–2970
+ 70. Khider D, Zhu F, Gil Y (2019) autoTS: automated machine learning for time series analysis. In: 
+AGU fall meeting abstracts 2019: PP43D–1637
+ 71. Erickson N, Mueller J, Shirkov A, Zhang H, Larroy P, Li M, Smola A (2020) Autogluon-tabular: 
+robust and accurate automl for structured data. arXiv preprint arXiv: 2003. 06505
+ 72. Olson RS, Bartley N, Urbanowicz RJ, Moore JH (2016) Evaluation of a tree-based pipeline optimi-
+zation tool for automating data science. In: Proceedings of the Genetic and Evolutionary Computa-
+tion Conference 2016, pp. 485–492
+ S. Mishra et al.
+1 3
+ 73. Olson RS, Moore JH (2016) TPOT: a tree-based pipeline optimization tool for automating machine 
+learning.  In Proceedings of the Workshop on Automatic Machine Learning 66–74
+ 74. Jin H, Song Q, Hu X (2019) Auto-keras: An efficient neural architecture search system. In: Proceed-
+ings of the 25th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining, 
+pp. 1946–1956
+ 75. Zimmer L, Lindauer M, Hutter F (2021) Auto-pytorch: Multi-fidelity metalearning for efficient and 
+robust autodl. IEEE Trans Pattern Anal Mach Intell 43(9):3079–3090
+ 76. Patil MA, Tagade P, Hariharan KS, Kolake SM, Song T, Yeo T, Doo S (2015) A novel multistage 
+support vector machine based approach for Li ion battery remaining useful life estimation. Appl 
+Energy 159:285–297
+ 77. Ren L, Zhao L, Hong S, Zhao S, Wang H, Zhang L (2018) Remaining useful life prediction for 
+lithium-ion battery: a deep learning approach. IEEE Access 6:50587–50598
+ 78. Ren L, Dong J, Wang X, Meng Z, Zhao L, Deen MJ (2021) A data-driven auto-CNN-LSTM predic-
+tion model for lithium-ion battery remaining useful life. IEEE Trans Industr Inf 17(5):3478–3487
+Publisher’s Note Springer Nature remains neutral with regard to jurisdictional claims in published maps 
+and institutional affiliations.
+Springer Nature or its licensor (e.g. a society or other partner) holds exclusive rights to this article under 
+a publishing agreement with the author(s) or other rightsholder(s); author self-archiving of the accepted 
+manuscript version of this article is solely governed by the terms of such publishing agreement and 
+applicable law.
+Authors and Affiliations
+Shivendu Mishra1,2 · Anurag Choubey1,3 · Bollampalli Areen Reddy1 · 
+Rajiv Misra1
+ * Shivendu Mishra 
+ shivendu_2021cs08@iitp.ac.in
+ Anurag Choubey 
+ anurag.pcs17@iitp.ac.in
+ Bollampalli Areen Reddy 
+ bollampalli_2101cs19@iitp.ac.in
+ Rajiv Misra 
+ rajivm@iitp.ac.in
+1 Department of Computer Science and Engineering, Indian Institute of Technology, 
+Patna 801106, Bihar, India
+2 Department of Information Technology, Rajkiya Engineering College, 
+Ambedkar Nagar 224122, Uttar Pradesh, India
+3 School of Computer Science Engineering and Technology, Bennett University, 
+Greater Noida 201310, Uttar Pradesh, India

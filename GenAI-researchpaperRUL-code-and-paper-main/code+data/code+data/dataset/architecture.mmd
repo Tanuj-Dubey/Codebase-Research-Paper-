@@ -1,0 +1,87 @@
+graph LR
+    %% Define Column Subgraphs
+    subgraph DataPool ["MULTI-CASE DATA POOL"]
+        direction TB
+        D1["<b>NASA B0005 Dataset</b><br/>Last 3000 Rows<br/>Seq Len: 96"]
+        C1["<b>Case 1:</b><br/>Chronos Only (Baseline)"]
+        C2["<b>Case 2:</b><br/>Partial Hybrid"]
+        C3["<b>Case 3:</b><br/>Full Hybrid Ensemble"]
+    end
+
+    subgraph Chronos ["CHRONOS FOUNDATION LAYER"]
+        direction TB
+        Ctx["<b>Multi-Context Inference</b><br/>Lengths: 96, 48"]
+        Samp["<b>Zero-Shot Inference</b><br/>12 Stochastic Samples"]
+        Agg["<b>Uncertainty Aggregator</b><br/>Inverse-Variance Blend"]
+    end
+
+    subgraph Refinement ["REFINEMENT ENSEMBLE MODULE"]
+        direction TB
+        Patch["<b>PatchTST</b><br/>Transformer Refinement<br/>(Patch: 16, Stride: 8)"]
+        TTM["<b>TinyTimeMixer</b><br/>MLP Projection<br/>(Dense Mapping)"]
+        Params["<b>Optimized Hyperparameters</b><br/>Batch Size: 128<br/>Learn Rate: 0.01<br/>Epochs: 50<br/>Dropout: 0.10<br/>Loss: 0.7 L1 + 0.3 MSE"]
+    end
+
+    subgraph Gating ["CONFIDENCE-AWARE GATING"]
+        direction TB
+        Blend["<b>Stability Gating</b><br/>60/40 Dynamic Blend"]
+        EMA["<b>EMA Low-Pass Filter</b><br/>Smoothing (β = 0.7)"]
+    end
+
+    subgraph Calibration ["CALIBRATION & SAFETY GUARD"]
+        direction TB
+        Calib["<b>Meta-Calibration</b><br/>Ridge Affine Mapping<br/>y = a*p + b"]
+        Guard["<b>Outlier Guard</b><br/>Adaptive Clipping<br/>(μ ± 3σ)"]
+        Out(("<b>Standardized RUL Output</b><br/>72.11% Error Reduction"))
+    end
+
+    %% Data Flow Routing
+    D1 ==> Ctx
+    C1 --> Ctx
+    C2 --> Ctx
+    C3 --> Ctx
+    
+    Ctx ==> Samp
+    Samp ==> Agg
+    
+    Agg ==> Patch
+    Agg ==> TTM
+    
+    Patch ==> Blend
+    TTM ==> Blend
+    
+    %% Parameter connections
+    Params -.-> Patch
+    Params -.-> TTM
+    
+    Blend ==> EMA
+    EMA ==> Calib
+    Calib ==> Guard
+    Guard ==> Out
+
+    %% Styling to exactly match the portfolio image colors
+    classDef default fill:#ffffff,stroke:#cccccc,stroke-width:2px,color:#333333,font-family:arial;
+    
+    classDef datapool fill:#e8eff5,stroke:#1b365d,stroke-width:2px,color:#000;
+    classDef chronos fill:#fdf2e9,stroke:#d35400,stroke-width:2px,color:#000;
+    classDef refine fill:#e8f8f5,stroke:#0e6251,stroke-width:2px,color:#000;
+    classDef gate fill:#e9f7ef,stroke:#1d8348,stroke-width:2px,color:#000;
+    classDef calib fill:#f1f8e9,stroke:#558b2f,stroke-width:2px,color:#000;
+    
+    classDef highlight fill:#fffde7,stroke:#f39c12,stroke-width:2px,color:#000;
+    classDef output fill:#1b365d,stroke:#2980b9,stroke-width:4px,color:#ffffff;
+
+    class D1,C1,C2,C3 datapool;
+    class Ctx,Samp,Agg chronos;
+    class Patch,TTM refine;
+    class Blend,EMA gate;
+    class Calib,Guard calib;
+    class Params highlight;
+    class Out output;
+    
+    %% Solid Subgraph borders
+    style DataPool fill:none,stroke:#1b365d,stroke-width:3px;
+    style Chronos fill:none,stroke:#d35400,stroke-width:3px;
+    style Refinement fill:none,stroke:#0e6251,stroke-width:3px;
+    style Gating fill:none,stroke:#1d8348,stroke-width:3px;
+    style Calibration fill:none,stroke:#558b2f,stroke-width:3px;
